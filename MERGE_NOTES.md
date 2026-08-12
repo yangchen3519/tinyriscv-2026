@@ -40,4 +40,6 @@
 - 共享仲裁/非法选择：PASS；
 - PAD 包装顶层展开与选择映射：PASS。
 
-本分支尚未推送到远端，尚未执行合并后的远程 VCS/Verdi、Vivado 综合或后端实现。
+合并后已在服务器使用 VCS `R-2020.12-SP1_Full64` 完成回归，输出
+`VCS_REGRESSION_PASS`；Verdi 成功批量加载 RV32I、PWM、UART debug 代表性 FSDB，输出
+`VERDI_BATCH_LOAD_PASS`。本轮没有执行 Vivado 综合或后端实现。

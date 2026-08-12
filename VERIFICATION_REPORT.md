@@ -101,7 +101,42 @@ shared_uart_debug_core3.fsdb
 - ModelSim 对芯片 RTL、四套 FPGA bridge、FPGA 顶层、PAD 顶层和主要 TB 联合编译：
   0 error、0 warning。
 
-本次没有重新执行远程 VCS/Verdi；第 3 节记录的是合并前当前功能版本的服务器结果。
 合并保留了该版本的四桥架构、PJY 学号/IF 修复，并把 GitHub 基线中 Khoree UART debug
-对 ROM/RAM 的等待与应答逻辑适配到 Khoree 私有 bridge。扩展 sID/IF 的本地 Icarus
-运行因速度超过本轮限时而终止，未记为 PASS 或 FAIL。
+对 ROM/RAM 的等待与应答逻辑适配到 Khoree 私有 bridge。
+
+## 6. 2026-08-12 合并后服务器 VCS/Verdi
+
+服务器验证目录：
+
+```text
+/data2/class/chenh/chenh36/DC_class_main/DC_class/designs/src/tinyriscv_merge_e68ef74
+```
+
+工具版本为 VCS `R-2020.12-SP1_Full64`，服务器回归退出码为 0，并输出：
+
+```text
+RV32I_CASES=20
+VCS_REGRESSION_PASS
+```
+
+详细结果：
+
+- 20 个基础程序 × 4 核：80/80 PASS；
+- 共享 PWM：4/4 PASS，四核均访问唯一 `yc_pwm u_shared_pwm`；
+- UART debug 35-byte packet：4/4 PASS；
+- sID：4/4 PASS，PJY 输出 `2025210902`；
+- IF：4/4 PASS，四核 UART 均输出 `0x8A`；
+- DIV/DIVU/REM/REMU 与 LED 删除功能负向测试：20/20 为预期 `NO_PASS`；
+- Temp/rT 为观察项：PJY PASS，YC/YX/Khoree 的不同输出被记录但不作为必过条件；
+- 无必过项 `TEST_FAIL`，无 VCS 编译/展开错误。
+
+Verdi 批量成功加载以下 FSDB：
+
+```text
+inst_add.fsdb
+fourcore_pwm_program.fsdb
+shared_uart_debug_core3.fsdb
+```
+
+输出 `VERDI_LOAD_PASS_*` 和 `VERDI_BATCH_LOAD_PASS`。VCS 运行时仍会提示 FSDB dumper
+版本较旧，但三份数据库均被 Verdi 实际读回，因此没有把提示误判为波形失败。

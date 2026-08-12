@@ -69,18 +69,18 @@ module yc_bridge_core(
     assign is_ram_req = (addr_i[31:28] == RAM_ADDR_TOP);
     assign phy_addr = is_ram_req ? {4'h0, addr_i[5:2]} : addr_i[9:2];
     assign input_match_seen = (seen_valid == 1'b1) &&
-                              (we_i == seen_we) &&
-                              (is_ram_req == seen_target) &&
-                              (phy_addr == seen_addr) &&
-                              ((we_i != `YC_WriteEnable) || (data_i == seen_wdata));
+                              (we_i === seen_we) &&
+                              (is_ram_req === seen_target) &&
+                              (phy_addr === seen_addr) &&
+                              ((we_i !== `YC_WriteEnable) || (data_i === seen_wdata));
     assign new_req = (req_i == `YC_RIB_REQ) && ((seen_valid == 1'b0) || (input_match_seen == 1'b0));
     assign cmd_byte = {trans_we, trans_target, 6'b0};
     assign trans_done = (((state == TX_DATA) || (state == RX_DATA)) && (byte_cnt == 2'd3));
     assign current_req_matches_trans = (req_i == `YC_RIB_REQ) &&
-                                       (we_i == trans_we) &&
-                                       (is_ram_req == trans_target) &&
-                                       (phy_addr == trans_addr) &&
-                                       ((trans_we != `YC_WriteEnable) || (data_i == trans_wdata));
+                                       (we_i === trans_we) &&
+                                       (is_ram_req === trans_target) &&
+                                       (phy_addr === trans_addr) &&
+                                       ((trans_we !== `YC_WriteEnable) || (data_i === trans_wdata));
 
     // If the current transfer ends this cycle and the skid buffer is empty,
     // the module can immediately consume the visible bus request.

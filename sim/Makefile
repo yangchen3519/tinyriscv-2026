@@ -4,8 +4,7 @@ TOP      ?= shared_arbiter_tb
 TB       ?= ../tb/$(TOP).v
 SIMV     ?= simv_$(TOP)
 LOGDIR   ?= ../output/vcs
-FPGA_RTL = ../fpga/rtl/yc_bridge_FPGA.v ../fpga/rtl/yc_rom.v \
-	../fpga/rtl/yc_ram.v ../fpga/rtl/tinyriscv_4core_fpga_top.v
+SIM_MODELS = -f models/filelist.f
 EXTRA_RTL ?=
 
 VCS_FLAGS = -full64 +v2k -timescale=1ns/1ps -debug_access+all -kdb \
@@ -32,10 +31,10 @@ arbiter:
 	$(MAKE) run TOP=shared_arbiter_tb
 
 uart_debug:
-	$(MAKE) run TOP=shared_uart_debug_tb EXTRA_RTL="$(FPGA_RTL)"
+	$(MAKE) run TOP=shared_uart_debug_tb EXTRA_RTL="$(SIM_MODELS)"
 
 rv32i:
-	$(MAKE) run TOP=fourcore_rv32i_smoke_tb EXTRA_RTL="$(FPGA_RTL)" \
+	$(MAKE) run TOP=fourcore_rv32i_smoke_tb EXTRA_RTL="$(SIM_MODELS)" \
 		RUN_ARGS="+INST_FILE=../firmware/test_command/Baisc_Inst_Example/inst_add.data"
 
 verdi:

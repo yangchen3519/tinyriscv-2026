@@ -843,7 +843,7 @@ module pjy_ex(
                         reg_we = (if_fire && (if_done_i == `PJY_False)) ? `PJY_WriteDisable : `PJY_WriteEnable;
                         reg_waddr = reg_waddr_i;
                         if (if_imm_sext != `PJY_ZeroWord) begin
-                            reg_wdata = reg1_rdata_i + if_imm_sext + 1;
+                            reg_wdata = reg1_rdata_i + if_imm_sext;
                         end else if (reg1_rdata_i >= reg2_rdata_i) begin
                             reg_wdata = `PJY_ZeroWord;
                         end else begin

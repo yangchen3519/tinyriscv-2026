@@ -21,7 +21,8 @@ top      = tinyriscv_4core_fpga_top
 filelist = fpga/filelist.f
 ```
 
-`fpga/filelist.f` 先引用 ASIC 清单，再加入唯一 YC FPGA bridge、ROM、RAM 与包装顶层。
+`fpga/filelist.f` 先引用 ASIC 清单，再加入 YC/YX/PJY/Khoree 四套 FPGA-side bridge、
+唯一 YC ROM/RAM 与包装顶层。
 不要再加入旧的四套 `sim/models`；最终交付中也已删除该目录。
 
 ## 2. 五个 testbench
@@ -34,8 +35,8 @@ filelist = fpga/filelist.f
 | `fourcore_pwm_program_tb.v` | 四核端到端访问唯一 YC PWM，核对周期/占空比/使能 | `+INST_FILE=.../PWM_inst.data`；`TEST_PASS fourcore_PWM_program shared_yc_pwm` |
 | `fourcore_program_probe_tb.v` | DIV/DIVU/REM/REMU、LED/GPIO 删除功能的有界负测 | `+INST_FILE=... +CORE=0..3`；必须同时出现 `status=NO_PASS` 和 `TEST_PASS bounded_program_probe` |
 
-三个端到端 TB 都例化 `tinyriscv_4core_fpga_top`，并通过
-`dut.u_rom._rom` 加载唯一共享 ROM，不再加载四份私有 ROM。
+端到端 TB 例化 `tinyriscv_4core_fpga_top`，并通过 `dut.u_rom._rom` 加载唯一共享 ROM。
+四个 core 的访问先分别经过自己协议对应的 chip-side/FPGA-side bridge，再仲裁到共享存储。
 
 ## 3. 仿真脚本
 
@@ -71,6 +72,17 @@ set TINYRISCV_TARGET fpga
 source D:/tiny_riscv/tinyriscv_4core_chiprtl/tinyriscv_4core/tools/vivado_add_sources.tcl
 ```
 
+PAD 包装层展开/后端交接模式：
+
+```tcl
+set TINYRISCV_TARGET chip_io
+source D:/tiny_riscv/tinyriscv_4core/tools/vivado_add_sources.tcl
+```
+
+`chip_io` 只添加 `tinyriscv_4core_top_IO.v` 并设置顶层，不会自动添加工艺库。综合前必须
+加入课程提供的真实 `PDDW0204CDG` PAD library 模型或网表。`tb/pddw0204cdg_stub.v` 只用于
+RTL 展开检查，绝不能加入综合或后端 Design Sources。
+
 XSim 运行 RV32I 示例：
 
 ```tcl
@@ -91,7 +103,8 @@ Directory，否则 `*_defines.vh` 无法找到。
 ## 5. 后端与 FPGA 的边界
 
 - 后端只取 `rtl/`、`sim/filelist.f`、`rtl/include/`，顶层是
-  `tinyriscv_4core_top`。
+  `tinyriscv_4core_top`；插入 TSMC180 PAD 时改用 `tinyriscv_4core_top_IO`，并加入课程
+  PAD library 模型/网表。不要用普通 RTL 仿真的 `000..011` 直接解释包装层物理编码。
 - FPGA 再取 `fpga/` 和程序文件，顶层是 `tinyriscv_4core_fpga_top`。
 - `tb/`、仿真脚本、FSDB 代码不加入 Design Sources。
 - 当前无 XDC；必须按实际板卡新建，不能猜测或复用旧单核引脚。

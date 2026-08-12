@@ -24,8 +24,10 @@ proc collect_filelist {filelist base_dir} {
 }
 
 # The chip/tapeout hierarchy is always a design source.  TINYRISCV_TARGET may
-# be "chip" (default) or "fpga".  FPGA mode adds the single shared YC
-# FPGA-side bridge, ROM, RAM and the synthesizable FPGA wrapper.
+# be "chip" (default), "chip_io" or "fpga".  chip_io additionally adds the
+# TSMC180 PAD wrapper; the caller must add the real PAD library model/netlist.
+# FPGA mode adds the four protocol-matched
+# FPGA-side bridge decoders, followed by the shared YC ROM/RAM and wrapper.
 set chip_files [collect_filelist [file join $sim_root filelist.f] $sim_root]
 add_files -norecurse -fileset sources_1 $chip_files
 set_property include_dirs [list [file join $project_root rtl include]] [get_filesets sources_1]
@@ -38,8 +40,13 @@ if {$TINYRISCV_TARGET eq "fpga"} {
     set_property top tinyriscv_4core_fpga_top [get_filesets sources_1]
 } elseif {$TINYRISCV_TARGET eq "chip"} {
     set_property top tinyriscv_4core_top [get_filesets sources_1]
+} elseif {$TINYRISCV_TARGET eq "chip_io"} {
+    set io_wrapper [file join $project_root rtl tinyriscv_4core_top_IO.v]
+    add_files -norecurse -fileset sources_1 $io_wrapper
+    set_property top tinyriscv_4core_top_IO [get_filesets sources_1]
+    puts "Added PAD wrapper. Add the real TSMC180 PDDW0204CDG library before synthesis."
 } else {
-    error "TINYRISCV_TARGET must be chip or fpga"
+    error "TINYRISCV_TARGET must be chip, chip_io or fpga"
 }
 
 # If TINYRISCV_SIM_TB is defined, add the selected TB.  Every end-to-end TB
@@ -56,7 +63,7 @@ if {[info exists TINYRISCV_SIM_TB] && $TINYRISCV_SIM_TB ne ""} {
     set_property include_dirs [list [file join $project_root rtl include]] [get_filesets sim_1]
     set_property top $TINYRISCV_SIM_TB [get_filesets sim_1]
     update_compile_order -fileset sim_1
-    puts "Added chip RTL, shared YC FPGA storage wrapper and TB: $TINYRISCV_SIM_TB"
+    puts "Added chip RTL, four FPGA bridge decoders, shared YC storage and TB: $TINYRISCV_SIM_TB"
 } else {
     puts "Added $TINYRISCV_TARGET RTL. Set TINYRISCV_SIM_TB before sourcing to add a testbench."
 }

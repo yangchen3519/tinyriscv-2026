@@ -14,8 +14,8 @@ $top = Get-Content (Join-Path $root "rtl\tinyriscv_4core_top.v") -Raw
 foreach ($instance in @("yc_regs u_shared_regs", "yc_pwm u_shared_pwm", "yc_uart_debug u_shared_uart_debug")) {
     if (([regex]::Matches($top, [regex]::Escape($instance))).Count -ne 1) { $errors += "shared instance count: $instance" }
 }
-if (([regex]::Matches($top, [regex]::Escape("yc_bridge_core u_shared_mem_bridge"))).Count -ne 1) {
-    $errors += "shared YC chip-side bridge instance count"
+foreach ($instance in @("yc_bridge_core u_yc_mem_bridge", "yx_bridge u_yx_mem_bridge", "pjy_mem_bridge_chip u_pjy_mem_bridge", "khoree_mem_bridge_chip u_kh_mem_bridge")) {
+    if (([regex]::Matches($top, [regex]::Escape($instance))).Count -ne 1) { $errors += "private bridge instance count: $instance" }
 }
 $resourceFiles = ($filelist -split "`r?`n") | Where-Object { $_ -match '(?i)(regs|pwm|uart_debug)\.v\s*$' }
 $expectedResourceFiles = @('../rtl/shared/yc_pwm.v', '../rtl/shared/yc_regs.v', '../rtl/shared/yc_uart_debug.v')
@@ -42,17 +42,6 @@ foreach ($file in $rtlVerilog) {
         $errors += "non-chip source remains under rtl: $($file.FullName)"
     }
 }
-$fpgaTop = Get-Content (Join-Path $root "fpga\rtl\tinyriscv_4core_fpga_top.v") -Raw
-foreach ($instance in @("yc_bridge_FPGA u_bridge_fpga", "yc_rom u_rom", "yc_ram u_ram")) {
-    if (([regex]::Matches($fpgaTop, [regex]::Escape($instance))).Count -ne 1) {
-        $errors += "shared FPGA instance count: $instance"
-    }
-}
-$privateBridgeSources = Get-ChildItem (Join-Path $root "rtl\cores") -Recurse -File -Filter "*.v" |
-    Where-Object { $_.Name -match '^(bridge|mem_bridge_chip)\.v$' -and $_.FullName -notmatch '\\cores\\yc\\' }
-if ($privateBridgeSources.Count) {
-    $errors += "private chip-side bridge source remains: $($privateBridgeSources.FullName -join ', ')"
-}
 $effective = Get-Content (Join-Path $root "rtl\cores\pjy\core\tinyriscv.v") -Raw
 foreach ($module in @("pjy_div u_", "pjy_csr_reg u_", "pjy_clint u_")) {
     if ($effective -match [regex]::Escape($module)) { $errors += "reachable PJY instance: $module" }
@@ -71,4 +60,4 @@ if ($errors.Count) {
     $errors | ForEach-Object { Write-Host "AUDIT_FAIL $_" }
     exit 1
 }
-Write-Host "AUDIT_PASS chip_rtl_only; 4cores+YC_regs_PWM_uart_debug_bridge; FPGA_wrapper_has_single_YC_bridge_ROM_RAM; forbidden_hierarchy_absent"
+Write-Host "AUDIT_PASS chip_rtl_only; four_private_chip_bridges; no_ROM_RAM_or_FPGA_bridge; no_unused_Verilog; 4cores+3shared; PJY_and_Khoree_forbidden_hierarchy_absent"

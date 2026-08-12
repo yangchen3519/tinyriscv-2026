@@ -4,8 +4,9 @@
 
 ## 1. 验证对象
 
-端到端测试统一例化 `tinyriscv_4core_fpga_top`，取指和访存经过唯一
-`yc_bridge_core → yc_bridge_FPGA → yc_rom/yc_ram`。PWM 程序访问唯一 `yc_pwm`。
+端到端测试统一例化 `tinyriscv_4core_fpga_top`。取指和访存分别经过所选 core 自己的
+chip-side bridge 与匹配 FPGA-side bridge，再仲裁到唯一 `yc_rom/yc_ram`。PWM 程序访问
+唯一 `yc_pwm`。
 扩展指令不在本轮验收范围。
 
 ## 2. 本地 ModelSim 2020.4
@@ -75,11 +76,32 @@ shared_uart_debug_core3.fsdb
 
 ## 4. 静态审计
 
-- ASIC filelist：59 文件、60 有效模块；
-- 只有一个 YC regs、PWM、uart_debug、bridge_core；
-- FPGA 顶层只有一个 YC bridge_FPGA、ROM、RAM；
-- YX/PJY/Khoree 私有 bridge 文件不在有效 RTL；
+- ASIC filelist：62 个源文件、75 个 module 声明，无重名模块；
+- 只有一个 YC regs、PWM、uart_debug；
+- ASIC 顶层有且仅有 YC/YX/PJY/Khoree 四个各自 chip-side bridge；
+- FPGA 顶层有四个匹配解码 bridge，并且只有一个 YC ROM、RAM；
 - `rtl/` 无 ROM/RAM/FPGA-side bridge 和未使用 Verilog；
 - PJY 乘除/余数、乘法、CSR、CLINT、JTAG、Timer、SPI、GPIO 不在有效层次。
 
 本轮没有执行 Vivado 综合、实现或板上验证；这些属于后续 FPGA/后端工作。
+
+## 5. 2026-08-12 GitHub 合并后复验
+
+在分支 `integrate/private-bridges-current` 上完成四核私有 bridge 与 GitHub 基线合并后，
+重新执行了以下检查：
+
+- `tools/audit_resources.ps1`：`AUDIT_PASS`，确认三项 YC 共享资源各一份、四个
+  chip-side bridge 各一份、ASIC filelist 无 ROM/RAM/FPGA-side bridge；
+- ModelSim 2020.4 全量基础回归：`MODELSIM_REGRESSION_PASS cases=20 core_runs=80`；
+- PWM 程序：YC/YX/PJY/Khoree 4/4 PASS，均访问 `u_shared_pwm`；
+- UART debug 35-byte packet：四个 `chip_sel` 分别 PASS；
+- `shared_arbiter_tb`：PASS；
+- `tinyriscv_4core_top_IO`：ModelSim 编译 0 error/0 warning，Icarus 完整展开 PASS；
+- PAD 包装选择转换：`TEST_PASS top_IO_chip_sel_mapping`；
+- ModelSim 对芯片 RTL、四套 FPGA bridge、FPGA 顶层、PAD 顶层和主要 TB 联合编译：
+  0 error、0 warning。
+
+本次没有重新执行远程 VCS/Verdi；第 3 节记录的是合并前当前功能版本的服务器结果。
+合并保留了该版本的四桥架构、PJY 学号/IF 修复，并把 GitHub 基线中 Khoree UART debug
+对 ROM/RAM 的等待与应答逻辑适配到 Khoree 私有 bridge。扩展 sID/IF 的本地 Icarus
+运行因速度超过本轮限时而终止，未记为 PASS 或 FAIL。

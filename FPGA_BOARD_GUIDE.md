@@ -9,14 +9,15 @@ tinyriscv_4core_fpga_top
 ├─ tinyriscv_4core_top u_chip
 │  ├─ 四个 core（只有 chip_sel 选中的核运行）
 │  ├─ 一份 YC regs / PWM / uart_debug
-│  └─ 一份 YC bridge_core
-├─ yc_bridge_FPGA u_bridge_fpga
+│  └─ 四份各自协议的 chip-side bridge
+├─ YC/YX/PJY/Khoree 四份匹配的 FPGA-side bridge
+├─ chip_sel 存储仲裁
 ├─ yc_rom u_rom
 └─ yc_ram u_ram
 ```
 
-因此 ROM、RAM、chip-side bridge 和 FPGA-side bridge 都是共享的 YC 实现。前仿真也使用
-这个顶层，不存在“仿真四份、上板一份”的结构差异。
+因此 ROM/RAM 是共享的 YC 实现，bridge 则按四个 core 的原始协议分别保留。前仿真与
+FPGA 上板使用相同的四 bridge + 一份存储结构。
 
 ## 2. Vivado Design Sources
 
@@ -27,10 +28,13 @@ set TINYRISCV_TARGET fpga
 source D:/tiny_riscv/tinyriscv_4core_chiprtl/tinyriscv_4core/tools/vivado_add_sources.tcl
 ```
 
-或手工加入 `sim/filelist.f` 和以下四个文件：
+或手工加入 `sim/filelist.f` 和以下文件：
 
 ```text
 fpga/rtl/yc_bridge_FPGA.v
+fpga/rtl/yx_fpga_bridge.v
+fpga/rtl/pjy_mem_bridge_fpga.v
+fpga/rtl/khoree_mem_bridge_fpga.v
 fpga/rtl/yc_rom.v
 fpga/rtl/yc_ram.v
 fpga/rtl/tinyriscv_4core_fpga_top.v
@@ -79,9 +83,9 @@ PWM_o[3:0], i2c_scl, i2c_sda, over, succ
 ## 6. 综合后检查
 
 - 顶层只有一个 `tinyriscv_4core_top`；
-- YC regs、PWM、uart_debug、bridge_core 各一个；
-- YC bridge_FPGA、ROM、RAM 各一个；
-- 没有 YX/PJY/Khoree 私有 bridge 或私有 ROM/RAM；
+- YC regs、PWM、uart_debug 各一个；
+- 四核各一套 chip-side bridge，各有一个匹配的 FPGA-side bridge；
+- YC ROM、RAM 各一个，没有四份私有 ROM/RAM；
 - 没有 DIV/REM、乘法器、CSR、CLINT、JTAG、Timer、SPI、GPIO 等已删除 PJY 逻辑；
 - 没有多驱动、锁存器、关键悬空端口或未约束 IO；
 - 时钟和 I2C 电气约束正确，时序满足目标频率。

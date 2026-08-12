@@ -55,7 +55,7 @@ module pjy_sid_uart_sender(
                 4'd6: sid_byte = 8'h30; // 0
                 4'd7: sid_byte = 8'h39; // 9
                 4'd8: sid_byte = 8'h30; // 0
-                4'd9: sid_byte = 8'h35; // 5
+                4'd9: sid_byte = 8'h32; // 2 (PJY: 2025210902)
                 default: sid_byte = 8'h00;
             endcase
         end

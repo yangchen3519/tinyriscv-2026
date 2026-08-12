@@ -44,6 +44,18 @@ module tinyriscv_4core_top_IO (
     wire       over_core;
     wire       succ_core;
     wire       unused_spare_in_core;
+    wire [2:0] chip_sel_logic;
+
+    // The fixed board/backend pins retain the legacy active-low key coding,
+    // while the merged logic top uses a simulator-friendly logical coding:
+    //   physical 111/110/101/011 -> logical 000/001/010/011.
+    // Any other physical value is translated to an invalid logical selector
+    // so that all cores and shared-resource write enables remain disabled.
+    assign chip_sel_logic = (chip_sel_core == 3'b111) ? 3'b000 :
+                            (chip_sel_core == 3'b110) ? 3'b001 :
+                            (chip_sel_core == 3'b101) ? 3'b010 :
+                            (chip_sel_core == 3'b011) ? 3'b011 :
+                                                       3'b111;
 
     // Input PADs.
     PDDW0204CDG mclk       (.OEN(1'b1), .I(1'b0), .PAD(clk),
@@ -120,7 +132,7 @@ module tinyriscv_4core_top_IO (
     tinyriscv_4core_top u_fourcore (
         .clk(clk_core),
         .rst(rst_core),
-        .chip_sel(chip_sel_core),
+        .chip_sel(chip_sel_logic),
         .uart_debug_en(uart_debug_en_core),
         .uart_rx(uart_rx_core),
         .uart_tx(uart_tx_core),

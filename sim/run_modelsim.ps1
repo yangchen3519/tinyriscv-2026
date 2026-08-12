@@ -11,16 +11,24 @@ Push-Location $sim
 try {
     & (Join-Path $ModelSimBin "vlog.exe") -work $work -f filelist.f
     & (Join-Path $ModelSimBin "vlog.exe") -work $work "+incdir+../rtl/include" `
-        ../fpga/rtl/yc_bridge_FPGA.v ../fpga/rtl/yc_rom.v ../fpga/rtl/yc_ram.v `
+        ../fpga/rtl/yc_bridge_FPGA.v ../fpga/rtl/yx_fpga_bridge.v `
+        ../fpga/rtl/pjy_mem_bridge_fpga.v ../fpga/rtl/khoree_mem_bridge_fpga.v `
+        ../fpga/rtl/yc_rom.v ../fpga/rtl/yc_ram.v `
         ../fpga/rtl/tinyriscv_4core_fpga_top.v ../tb/shared_arbiter_tb.v ../tb/shared_uart_debug_tb.v `
         ../tb/fourcore_rv32i_smoke_tb.v ../tb/fourcore_pwm_program_tb.v
     & (Join-Path $ModelSimBin "vmap.exe") work_regression $work | Out-Null
-    $tests = @("shared_arbiter_tb", "shared_uart_debug_tb")
-    foreach ($top in $tests) {
-        $log = Join-Path $output "$top.regression.log"
-        & (Join-Path $ModelSimBin "vsim.exe") -c -quiet -lib work_regression $top -do "run -all; quit -f" | Set-Content $log
+    $arbLog = Join-Path $output "shared_arbiter_tb.regression.log"
+    & (Join-Path $ModelSimBin "vsim.exe") -c -quiet -lib work_regression shared_arbiter_tb `
+        -do "run -all; quit -f" | Set-Content $arbLog
+    $arbText = Get-Content $arbLog -Raw
+    if ($arbText -notmatch "TEST_PASS" -or $arbText -match "TEST_FAIL") { throw "shared_arbiter_tb failed" }
+
+    foreach ($core in 0..3) {
+        $log = Join-Path $output "shared_uart_debug_core$core.regression.log"
+        & (Join-Path $ModelSimBin "vsim.exe") -c -quiet -lib work_regression shared_uart_debug_tb `
+            "+CHIP_SEL=$core" -do "run -all; quit -f" | Set-Content $log
         $text = Get-Content $log -Raw
-        if ($text -notmatch "TEST_PASS" -or $text -match "TEST_FAIL") { throw "$top failed" }
+        if ($text -notmatch "TEST_PASS" -or $text -match "TEST_FAIL") { throw "shared_uart_debug core $core failed" }
     }
     $cases = Get-ChildItem ../firmware/test_command/Baisc_Inst_Example/*.data |
         Where-Object { $_.Name -notmatch '^inst_(div|divu|rem|remu)\.data$' }

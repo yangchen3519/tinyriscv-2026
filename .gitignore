@@ -1,0 +1,31 @@
+# Simulator output
+*.vvp
+*.vcd
+*.fsdb
+*.log
+simv*
+csrc/
+DVEfiles/
+verdiLog/
+work*/
+transcript
+modelsim.ini
+ucli.key
+novas.conf
+novas.rc
+
+# FPGA/Vivado generated state
+*.jou
+*.str
+*.wdb
+*.pb
+.Xil/
+*.cache/
+*.runs/
+*.sim/
+*.hw/
+*.ip_user_files/
+
+# Local regression output
+output/
+results/

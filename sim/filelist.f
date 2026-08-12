@@ -10,6 +10,7 @@
 ../rtl/cores/khoree/core/rib.v
 ../rtl/cores/khoree/core/tinyriscv.v
 ../rtl/cores/khoree/perips/i2c.v
+../rtl/cores/khoree/perips/mem_bridge_chip.v
 ../rtl/cores/khoree/perips/uart.v
 ../rtl/cores/khoree/soc/tinyriscv_soc_top.v
 ../rtl/cores/pjy/core/ctrl.v
@@ -22,6 +23,7 @@
 ../rtl/cores/pjy/core/tinyriscv.v
 ../rtl/cores/pjy/perips/i2c.v
 ../rtl/cores/pjy/perips/if_uart_sender.v
+../rtl/cores/pjy/perips/mem_bridge_chip.v
 ../rtl/cores/pjy/perips/sid_uart_sender.v
 ../rtl/cores/pjy/perips/uart.v
 ../rtl/cores/pjy/soc/tinyriscv_soc_top.v
@@ -50,6 +52,7 @@
 ../rtl/cores/yx/core/rt.v
 ../rtl/cores/yx/core/sid.v
 ../rtl/cores/yx/core/tinyriscv.v
+../rtl/cores/yx/perips/bridge.v
 ../rtl/cores/yx/perips/i2c.v
 ../rtl/cores/yx/perips/uart.v
 ../rtl/cores/yx/soc/tinyriscv_soc_top.v

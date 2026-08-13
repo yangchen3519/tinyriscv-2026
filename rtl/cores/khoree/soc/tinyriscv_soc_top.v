@@ -55,6 +55,8 @@ module khoree_tinyriscv_soc_top(
     output wire[31:0] mem_wdata_o,
     input wire[31:0] mem_rdata_i,
     input wire mem_ack_i,
+    input wire mem_rom_ack_i,
+    input wire mem_ram_ack_i,
     input wire mem_hold_i
     );
     
@@ -189,8 +191,15 @@ module khoree_tinyriscv_soc_top(
                          (!debug_mem_access || mem_ack_i);
 
     wire ram_access;
+    wire rom_access;
     assign ram_access = m0_req_i && (m0_addr_i[31:28] == 4'h1); 
-    assign mem_req_o = debug_mem_access | ram_access | ~uart_debug_pin;
+    assign rom_access = m0_req_i && (m0_addr_i[31:28] == 4'h0);
+    // Instruction fetch uses the external ROM whenever execute has no bus
+    // request.  A local UART/PWM/I2C request must suppress that implicit fetch;
+    // otherwise the bridge starts a bogus ROM[0] transaction in parallel and
+    // keeps Khoree stalled after the local peripheral acknowledges.
+    assign mem_req_o = debug_mem_access | rom_access | ram_access |
+                       (~uart_debug_pin && !m0_req_i);
     assign mem_we_o = (debug_mem_access && debug_addr_i[31:28] == 4'h1) ? s1_we_o :
                       (debug_mem_access && debug_addr_i[31:28] == 4'h0) ? s0_we_o :
                       ram_access ? s1_we_o : s0_we_o;
@@ -206,9 +215,11 @@ module khoree_tinyriscv_soc_top(
     assign s0_data_i = mem_rdata_i;
     assign s1_data_i = mem_rdata_i;
     assign bridge_busy = mem_hold_i;
-    assign bridge_done = mem_ack_i;
-    assign bridge_rom_done = mem_ack_i & ~ram_access;
-    assign bridge_ram_done = mem_ack_i & ram_access;
+    // The external bridge owns the transaction until its delayed response.
+    // Use its latched target, rather than the CPU's already-changing address.
+    assign bridge_done = mem_rom_ack_i | mem_ram_ack_i;
+    assign bridge_rom_done = mem_rom_ack_i;
+    assign bridge_ram_done = mem_ram_ack_i;
 
     always @ (posedge clk) begin
         if (rst == `KHOREE_RstEnable) begin

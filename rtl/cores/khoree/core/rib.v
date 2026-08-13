@@ -110,7 +110,11 @@ module khoree_rib(
 
     reg m0_ack;
     assign m0_ack_o = m0_ack;
-    assign s7_req_o = m0_req_i;
+    // Only present an I2C request while master 0 is actually addressing
+    // slave 7.  Driving this from every CPU request keeps req_i high during
+    // instruction fetches, so the I2C controller cannot detect the rising
+    // edge of the later rT access and the core stalls forever.
+    assign s7_req_o = m0_req_i && (m0_addr_i[31:28] == 4'h7);
 
     // ???????4??????????????
     // ??????16????

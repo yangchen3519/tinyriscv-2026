@@ -179,7 +179,9 @@ module khoree_i2c(
                     end
                 end
                 DATA1: begin
-                    if (`SCL_POS) begin
+                    // Sample in the middle of SCL high, matching the stable-high
+                    // sampling used by the other three cores after I2C merging.
+                    if (`SCL_HIG) begin
                         num <= num + 1'b1;    
                         case (num)
                             4'd0: iic_read_data[15] <= sda_i;
@@ -207,7 +209,9 @@ module khoree_i2c(
                     if (`SCL_LOW) begin
                         sda_r <= 1'b0; 
                     end
-                    else if (`SCL_NEG) begin 
+                    else if (`SCL_HIG) begin
+                        // The LM75 has sampled the master ACK. Release SDA now
+                        // so byte-two bit 7 is present for the next data clock.
                         cstate <= DATA2;
                         sda_link <= 1'b0; 
                         sda_r <= 1'b1;    
@@ -217,7 +221,7 @@ module khoree_i2c(
                     end
                 end
                 DATA2: begin                
-                    if (`SCL_POS) begin    
+                    if (`SCL_HIG) begin
                         num <= num + 1'b1;    
                         case (num)
                             4'd0: iic_read_data[7] <= sda_i;

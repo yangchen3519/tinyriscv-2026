@@ -1,6 +1,9 @@
-module lm75_model_rt(input wire io_scl,inout wire io_sda);
+module lm75_model_rt #(
+ parameter [7:0] TEMP=8'h1a,
+ parameter [7:0] FRAC=8'h80
+)(input wire io_scl,inout wire io_sda);
  localparam IDLE=3'd0,AW=3'd1,REG=3'd2,AR=3'd3,TX=3'd4,NACK=3'd5,TX2=3'd6,ACK2=3'd7;
- localparam ADDR=7'h48,TEMP=8'h1a,FRAC=8'h80;
+ localparam ADDR=7'h48;
  reg sda_low;reg[2:0]phase,after_ack;reg[3:0]bit_cnt;reg[2:0]tx_bit;
  reg[7:0]shift,got_byte,reg_ptr;reg reg_ptr_seen,ack_pending,ack_active;
  integer addr_write_count,addr_read_count;
@@ -16,7 +19,11 @@ module lm75_model_rt(input wire io_scl,inout wire io_sda);
   if(!ack_pending&&!ack_active)begin got_byte={shift[6:0],io_sda};shift<={shift[6:0],io_sda};
    if(bit_cnt==7)begin bit_cnt<=0;shift<=0;ack_pending<=1;
     case(phase)
-     AW:begin if(got_byte=={ADDR,1'b0})addr_write_count=addr_write_count+1;after_ack<=REG;end
+     AW:begin
+      if(got_byte=={ADDR,1'b0})begin addr_write_count=addr_write_count+1;after_ack<=REG;end
+      else if(got_byte=={ADDR,1'b1})begin addr_read_count=addr_read_count+1;after_ack<=TX;end
+      else after_ack<=IDLE;
+     end
      REG:begin reg_ptr<=got_byte;reg_ptr_seen<=1;after_ack<=IDLE;end
      default:begin if(got_byte=={ADDR,1'b1})addr_read_count=addr_read_count+1;after_ack<=TX;end
     endcase

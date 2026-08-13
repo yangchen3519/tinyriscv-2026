@@ -129,7 +129,9 @@ module tinyriscv_4core_top(
     wire kh_rom_req = kh_mem_req && (kh_mem_addr[31:28] == 4'h0);
     wire kh_ram_req = kh_mem_req && (kh_mem_addr[31:28] == 4'h1);
     wire [31:0] pjy_mem_rdata = pjy_ram_req ? pjy_ram_rdata : pjy_rom_rdata;
-    wire [31:0] kh_mem_rdata = kh_ram_req ? kh_ram_rdata : kh_rom_rdata;
+    wire [31:0] kh_mem_rdata = kh_ram_done ? kh_ram_rdata :
+                               kh_rom_done ? kh_rom_rdata :
+                               kh_ram_req  ? kh_ram_rdata : kh_rom_rdata;
 
     yc_bridge_core u_yc_mem_bridge(
         .clk(clk), .rst(rst_yc), .req_i(yc_mem_req), .we_i(yc_mem_we),
@@ -266,7 +268,8 @@ module tinyriscv_4core_top(
         .debug_rdata_o(kh_dbg_rdata), .debug_ack_o(kh_dbg_ack),
         .mem_req_o(kh_mem_req), .mem_we_o(kh_mem_we), .mem_addr_o(kh_mem_addr),
         .mem_wdata_o(kh_mem_wdata), .mem_rdata_i(kh_mem_rdata),
-        .mem_ack_i(kh_mem_done), .mem_hold_i(kh_mem_busy)
+        .mem_ack_i(kh_mem_done), .mem_rom_ack_i(kh_rom_done),
+        .mem_ram_ack_i(kh_ram_done), .mem_hold_i(kh_mem_busy)
     );
 
 endmodule

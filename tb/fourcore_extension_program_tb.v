@@ -1,6 +1,9 @@
 `timescale 1ns/1ps
 // TEST_KIND: 0=sID, 1=IF, 2=Temp/rT.  CORE: 0=YC,1=YX,2=PJY,3=Khoree.
-module fourcore_extension_program_tb;
+module fourcore_extension_program_tb #(
+    parameter [7:0] LM75_TEMP = 8'h1a,
+    parameter [7:0] LM75_FRAC = 8'h80
+);
 `ifdef FSDB
     reg[1023:0] fsdb_file;
     initial begin
@@ -75,8 +78,18 @@ module fourcore_extension_program_tb;
             end
             default: begin
                 wait_uart_byte(rx_byte);
-                if(rx_byte!==8'h1a)begin errors=errors+1;$display("TEST_FAIL extension_Temp core=%0d byte=%02h",core,rx_byte);end
-                else $display("TEST_PASS extension_Temp core=%0d byte=1a",core);
+                // YC, YX and Khoree implement the course-defined LM75
+                // result raw[14:7].  PJY returns the sensor's high byte.
+                if (rx_byte !== ((core == 2) ? LM75_TEMP :
+                                 {LM75_TEMP[6:0],LM75_FRAC[7]})) begin
+                    errors=errors+1;
+                    $display("TEST_FAIL extension_Temp core=%0d byte=%02h expected=%02h",
+                             core,rx_byte,(core == 2) ? LM75_TEMP :
+                             {LM75_TEMP[6:0],LM75_FRAC[7]});
+                end else begin
+                    $display("TEST_PASS extension_Temp core=%0d byte=%02h",
+                             core,rx_byte);
+                end
             end
         endcase
         $finish;
@@ -86,5 +99,7 @@ module fourcore_extension_program_tb;
     tinyriscv_4core_fpga_top dut(.clk(clk),.rst(rst),.chip_sel(chip_sel),
       .uart_debug_en(1'b0),.uart_rx(1'b1),.uart_tx(uart_tx),.PWM_o(PWM_o),
       .i2c_scl(i2c_scl),.i2c_sda(i2c_sda),.over(over),.succ(succ));
-    lm75_model_rt u_lm75(.io_scl(i2c_scl),.io_sda(i2c_sda));
+    lm75_model_rt #(.TEMP(LM75_TEMP),.FRAC(LM75_FRAC)) u_lm75(
+      .io_scl(i2c_scl),.io_sda(i2c_sda));
+
 endmodule

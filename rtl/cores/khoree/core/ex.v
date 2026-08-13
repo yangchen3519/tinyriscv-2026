@@ -122,11 +122,14 @@ module khoree_ex(
     assign jump_addr_o = jump_addr;
 
     reg mem_ack_flag;
+    reg [`KHOREE_MemBus] mem_rdata_latched;
     always @ (posedge clk) begin
         if (rst == `KHOREE_RstEnable) begin
             mem_ack_flag <= 0;
+            mem_rdata_latched <= `KHOREE_ZeroWord;
         end else if(mem_req && mem_ack_i) begin
             mem_ack_flag <= 1;
+            mem_rdata_latched <= mem_rdata_i;
         end else
             mem_ack_flag <= 0;
     end
@@ -539,20 +542,26 @@ module khoree_ex(
                         mem_wdata_o = 32'h00000005;
                     end
                     `KHOREE_INST_RT: begin
+                        jump_flag = `KHOREE_JumpDisable;
+                        jump_addr = `KHOREE_ZeroWord;
+                        mem_we = `KHOREE_WriteDisable;
+                        mem_waddr_o = `KHOREE_ZeroWord;
+                        mem_raddr_o = op1_add_op2_res;
+                        mem_wdata_o = `KHOREE_ZeroWord;
+                        // Do not repeatedly write an incomplete I2C value to
+                        // the shared register file while rT is stalled.
+                        reg_we = mem_ack_flag ? reg_we_i : `KHOREE_WriteDisable;
                         if (mem_ack_flag) begin
+                            // The peripheral ACK is registered, so release the
+                            // pipeline on the following cycle and write back
+                            // the value captured with that ACK.
                             hold_flag = `KHOREE_HoldDisable;
                             mem_req = `KHOREE_RIB_NREQ;
-                        end
-                        else begin
-                            jump_flag = `KHOREE_JumpDisable;
+                            reg_wdata = mem_rdata_latched;
+                        end else begin
                             hold_flag = `KHOREE_HoldEnable;
-                            jump_addr = `KHOREE_ZeroWord;
-                            reg_wdata = mem_rdata_i;
-                            mem_we = `KHOREE_WriteDisable;
                             mem_req = `KHOREE_RIB_REQ;
-                            mem_waddr_o = `KHOREE_ZeroWord;
-                            mem_raddr_o = op1_add_op2_res;
-                            mem_wdata_o = `KHOREE_ZeroWord;
+                            reg_wdata = mem_rdata_i;
                         end
                     end
                     `KHOREE_INST_IF: begin

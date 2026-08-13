@@ -31,19 +31,12 @@ module pjy_tinyriscv(
     output wire[`PJY_MemAddrBus] rib_pc_addr_o,    // 取指地址
     input wire[`PJY_MemBus] rib_pc_data_i,         // 取到的指令内容
 
-    input wire[`PJY_RegAddrBus] jtag_reg_addr_i,   // jtag模块读、写寄存器的地址
-    input wire[`PJY_RegBus] jtag_reg_data_i,       // jtag模块写寄存器数据
-    input wire jtag_reg_we_i,                  // jtag模块写寄存器标志
-    output wire[`PJY_RegBus] jtag_reg_data_o,      // jtag模块读取到的寄存器数据
 
     input wire rib_hold_flag_i,                // 总线暂停标志
     // TASK1_EXT_MEM_BEGIN: 片外ROM/RAM桥接器暂停标志
     input wire mem_hold_flag_i,
     // TASK1_EXT_MEM_END
-    input wire jtag_halt_flag_i,               // jtag暂停标志
-    input wire jtag_reset_flag_i,              // jtag复位PC标志
-
-    input wire[`PJY_INT_BUS] int_i,                // 中断信号
+    input wire debug_halt_flag_i,
 
     // TASK4_SID_BEGIN: Send ID extension handshake
     output wire sid_start_o,
@@ -87,7 +80,6 @@ module pjy_tinyriscv(
     // if_id模块输出信号
 	wire[`PJY_InstBus] if_inst_o;
     wire[`PJY_InstAddrBus] if_inst_addr_o;
-    wire[`PJY_INT_BUS] if_int_flag_o;
 
     // id模块输出信号
     wire[`PJY_RegAddrBus] id_reg1_raddr_o;
@@ -98,10 +90,6 @@ module pjy_tinyriscv(
     wire[`PJY_RegBus] id_reg2_rdata_o;
     wire id_reg_we_o;
     wire[`PJY_RegAddrBus] id_reg_waddr_o;
-    wire[`PJY_MemAddrBus] id_csr_raddr_o;
-    wire id_csr_we_o;
-    wire[`PJY_RegBus] id_csr_rdata_o;
-    wire[`PJY_MemAddrBus] id_csr_waddr_o;
     wire[`PJY_MemAddrBus] id_op1_o;
     wire[`PJY_MemAddrBus] id_op2_o;
     wire[`PJY_MemAddrBus] id_op1_jump_o;
@@ -114,9 +102,6 @@ module pjy_tinyriscv(
     wire[`PJY_RegAddrBus] ie_reg_waddr_o;
     wire[`PJY_RegBus] ie_reg1_rdata_o;
     wire[`PJY_RegBus] ie_reg2_rdata_o;
-    wire ie_csr_we_o;
-    wire[`PJY_MemAddrBus] ie_csr_waddr_o;
-    wire[`PJY_RegBus] ie_csr_rdata_o;
     wire[`PJY_MemAddrBus] ie_op1_o;
     wire[`PJY_MemAddrBus] ie_op2_o;
     wire[`PJY_MemAddrBus] ie_op1_jump_o;
@@ -134,14 +119,6 @@ module pjy_tinyriscv(
     wire ex_hold_flag_o;
     wire ex_jump_flag_o;
     wire[`PJY_InstAddrBus] ex_jump_addr_o;
-    wire ex_div_start_o;
-    wire[`PJY_RegBus] ex_div_dividend_o;
-    wire[`PJY_RegBus] ex_div_divisor_o;
-    wire[2:0] ex_div_op_o;
-    wire[`PJY_RegAddrBus] ex_div_reg_waddr_o;
-    wire[`PJY_RegBus] ex_csr_wdata_o;
-    wire ex_csr_we_o;
-    wire[`PJY_MemAddrBus] ex_csr_waddr_o;
     // TASK4_SID_BEGIN
     wire ex_sid_start_o;
     assign sid_start_o = ex_sid_start_o;
@@ -165,56 +142,10 @@ module pjy_tinyriscv(
     wire[`PJY_RegBus] regs_rdata1_o;
     wire[`PJY_RegBus] regs_rdata2_o;
 
-    // csr_reg模块输出信号
-    wire[`PJY_RegBus] csr_data_o;
-    wire[`PJY_RegBus] csr_clint_data_o;
-    wire csr_global_int_en_o;
-    wire[`PJY_RegBus] csr_clint_csr_mtvec;
-    wire[`PJY_RegBus] csr_clint_csr_mepc;
-    wire[`PJY_RegBus] csr_clint_csr_mstatus;
-
     // ctrl模块输出信号
     wire[`PJY_Hold_Flag_Bus] ctrl_hold_flag_o;
     wire ctrl_jump_flag_o;
     wire[`PJY_InstAddrBus] ctrl_jump_addr_o;
-
-    // div模块输出信号
-    wire[`PJY_RegBus] div_result_o;
-	wire div_ready_o;
-    wire div_busy_o;
-    wire[`PJY_RegAddrBus] div_reg_waddr_o;
-
-    // clint模块输出信号
-    wire clint_we_o;
-    wire[`PJY_MemAddrBus] clint_waddr_o;
-    wire[`PJY_MemAddrBus] clint_raddr_o;
-    wire[`PJY_RegBus] clint_data_o;
-    wire[`PJY_InstAddrBus] clint_int_addr_o;
-    wire clint_int_assert_o;
-    wire clint_hold_flag_o;
-
-    // Course tapeout reduction: CSR/CLINT/interrupt and M-extension engines are
-    // absent from the effective hierarchy.  Their legacy pipeline pins are
-    // tied to the inactive values so RV32I and the custom instructions retain
-    // their original timing.
-    assign csr_data_o = `PJY_ZeroWord;
-    assign csr_clint_data_o = `PJY_ZeroWord;
-    assign csr_global_int_en_o = 1'b0;
-    assign csr_clint_csr_mtvec = `PJY_ZeroWord;
-    assign csr_clint_csr_mepc = `PJY_ZeroWord;
-    assign csr_clint_csr_mstatus = `PJY_ZeroWord;
-    assign div_result_o = `PJY_ZeroWord;
-    assign div_ready_o = 1'b0;
-    assign div_busy_o = 1'b0;
-    assign div_reg_waddr_o = `PJY_ZeroReg;
-    assign clint_we_o = 1'b0;
-    assign clint_waddr_o = `PJY_ZeroWord;
-    assign clint_raddr_o = `PJY_ZeroWord;
-    assign clint_data_o = `PJY_ZeroWord;
-    assign clint_int_addr_o = `PJY_ZeroWord;
-    assign clint_int_assert_o = 1'b0;
-    assign clint_hold_flag_o = 1'b0;
-
 
     assign rib_ex_addr_o = (ex_mem_we_o == `PJY_WriteEnable)? ex_mem_waddr_o: ex_mem_raddr_o;
     assign rib_ex_data_o = ex_mem_wdata_o;
@@ -228,7 +159,6 @@ module pjy_tinyriscv(
     pjy_pc_reg u_pc_reg(
         .clk(clk),
         .rst(rst),
-        .jtag_reset_flag_i(jtag_reset_flag_i),
         .pc_o(pc_pc_o),
         .hold_flag_i(ctrl_hold_flag_o),
         .jump_flag_i(ctrl_jump_flag_o),
@@ -250,10 +180,9 @@ module pjy_tinyriscv(
         // TASK5_RT_END
         // TASK1_EXT_MEM_END
         .hold_flag_o(ctrl_hold_flag_o),
-        .hold_flag_clint_i(clint_hold_flag_o),
         .jump_flag_o(ctrl_jump_flag_o),
         .jump_addr_o(ctrl_jump_addr_o),
-        .jtag_halt_flag_i(jtag_halt_flag_i)
+        .debug_halt_flag_i(debug_halt_flag_i)
     );
 
     assign regfile_we_o = ex_reg_we_o | rt_reg_we_i | if_reg_we_i;
@@ -265,16 +194,12 @@ module pjy_tinyriscv(
     assign regfile_raddr2_o = id_reg2_raddr_o;
     assign regs_rdata1_o = regfile_rdata1_i;
     assign regs_rdata2_o = regfile_rdata2_i;
-    assign jtag_reg_data_o = 32'h0;
-
     // if_id模块例化
     pjy_if_id u_if_id(
         .clk(clk),
         .rst(rst),
         .inst_i(rib_pc_data_i),
         .inst_addr_i(pc_pc_o),
-        .int_flag_i(int_i),
-        .int_flag_o(if_int_flag_o),
         .hold_flag_i(ctrl_hold_flag_o),
         .inst_o(if_inst_o),
         .inst_addr_o(if_inst_addr_o)
@@ -299,12 +224,7 @@ module pjy_tinyriscv(
         .op1_o(id_op1_o),
         .op2_o(id_op2_o),
         .op1_jump_o(id_op1_jump_o),
-        .op2_jump_o(id_op2_jump_o),
-        .csr_rdata_i(csr_data_o),
-        .csr_raddr_o(id_csr_raddr_o),
-        .csr_we_o(id_csr_we_o),
-        .csr_rdata_o(id_csr_rdata_o),
-        .csr_waddr_o(id_csr_waddr_o)
+        .op2_jump_o(id_op2_jump_o)
     );
 
     // id_ex模块例化
@@ -331,13 +251,7 @@ module pjy_tinyriscv(
         .op1_o(ie_op1_o),
         .op2_o(ie_op2_o),
         .op1_jump_o(ie_op1_jump_o),
-        .op2_jump_o(ie_op2_jump_o),
-        .csr_we_i(id_csr_we_o),
-        .csr_waddr_i(id_csr_waddr_o),
-        .csr_rdata_i(id_csr_rdata_o),
-        .csr_we_o(ie_csr_we_o),
-        .csr_waddr_o(ie_csr_waddr_o),
-        .csr_rdata_o(ie_csr_rdata_o)
+        .op2_jump_o(ie_op2_jump_o)
     );
 
     // ex模块例化
@@ -365,23 +279,6 @@ module pjy_tinyriscv(
         .hold_flag_o(ex_hold_flag_o),
         .jump_flag_o(ex_jump_flag_o),
         .jump_addr_o(ex_jump_addr_o),
-        .int_assert_i(clint_int_assert_o),
-        .int_addr_i(clint_int_addr_o),
-        .div_ready_i(div_ready_o),
-        .div_result_i(div_result_o),
-        .div_busy_i(div_busy_o),
-        .div_reg_waddr_i(div_reg_waddr_o),
-        .div_start_o(ex_div_start_o),
-        .div_dividend_o(ex_div_dividend_o),
-        .div_divisor_o(ex_div_divisor_o),
-        .div_op_o(ex_div_op_o),
-        .div_reg_waddr_o(ex_div_reg_waddr_o),
-        .csr_we_i(ie_csr_we_o),
-        .csr_waddr_i(ie_csr_waddr_o),
-        .csr_rdata_i(ie_csr_rdata_o),
-        .csr_wdata_o(ex_csr_wdata_o),
-        .csr_we_o(ex_csr_we_o),
-        .csr_waddr_o(ex_csr_waddr_o),
         // TASK4_SID_BEGIN
         .sid_busy_i(sid_busy_i),
         .sid_done_i(sid_done_i),

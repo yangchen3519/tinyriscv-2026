@@ -115,9 +115,6 @@ module pjy_i2c(
         if (rst == `PJY_RstEnable) begin
             dev_addr <= 8'h48;
             reg_ptr <= 8'h0;
-            tx_data <= 8'h0;
-            rx_data <= 8'h0;
-            rx_low_data <= 8'h0;
             start_req <= `PJY_False;
             // TASK5_RT_BEGIN
             rt_start_seen <= `PJY_False;
@@ -161,6 +158,9 @@ module pjy_i2c(
             read_byte_index <= 1'b0;
             next_after_ack <= NEXT_REG_PTR;
             busy <= `PJY_False;
+            tx_data <= 8'h0;
+        rx_data <= 8'h0;
+        rx_low_data <= 8'h0;
             // TASK5_RT_BEGIN
             rt_done_o <= `PJY_False;
             // TASK5_RT_END

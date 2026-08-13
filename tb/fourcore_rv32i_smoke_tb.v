@@ -8,7 +8,7 @@ module fourcore_rv32i_smoke_tb;
     end
 `endif
     reg clk=0, rst=0;
-    reg[2:0] chip_sel=0;
+    reg[1:0] chip_sel=0;
     wire uart_tx, i2c_scl, i2c_sda, over, succ;
     wire[3:0] PWM_o;
     wire[7:0] ext_mem_data_o, ext_mem_data_i;
@@ -20,7 +20,7 @@ module fourcore_rv32i_smoke_tb;
     always #10 clk=~clk;
     pullup(i2c_scl); pullup(i2c_sda);
 
-    task run_core; input[2:0] owner; integer cycles; reg saw_zero; begin
+    task run_core; input[1:0] owner; integer cycles; reg saw_zero; begin
         @(negedge clk); rst=0; chip_sel=owner; repeat(8) @(posedge clk); @(negedge clk); rst=1;
         cycles=0; saw_zero=0;
         while(cycles<2000000 && !(saw_zero && dut.u_chip.status_x26===32'h1)) begin
@@ -38,7 +38,7 @@ module fourcore_rv32i_smoke_tb;
         if(!$value$plusargs("INST_FILE=%s",inst_file))
             inst_file="../inputs/pjy/test_command/Baisc_Inst_Example/inst_add.data";
         $readmemh(inst_file,dut.u_rom._rom);
-        run_core(3'b000); run_core(3'b001); run_core(3'b010); run_core(3'b011);
+        run_core(2'b00); run_core(2'b01); run_core(2'b10); run_core(2'b11);
         if(errors==0) $display("TEST_PASS fourcore_RV32I %0s",inst_file);
         else $display("TEST_FAIL fourcore_RV32I errors=%0d",errors);
         $finish;

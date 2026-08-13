@@ -9,11 +9,6 @@ module yx_ex(
     input wire[`YX_RegAddrBus] reg_waddr_i,
     input wire[`YX_RegBus] reg1_rdata_i,
     input wire[`YX_RegBus] reg2_rdata_i,
-    input wire csr_we_i,
-    input wire[`YX_MemAddrBus] csr_waddr_i,
-    input wire[`YX_RegBus] csr_rdata_i,
-    input wire int_assert_i,
-    input wire[`YX_InstAddrBus] int_addr_i,
     input wire[`YX_MemAddrBus] op1_i,
     input wire[`YX_MemAddrBus] op2_i,
     input wire[`YX_MemAddrBus] op1_jump_i,
@@ -27,9 +22,6 @@ module yx_ex(
     output wire[`YX_RegBus] reg_wdata_o,
     output wire reg_we_o,
     output wire[`YX_RegAddrBus] reg_waddr_o,
-    output wire[`YX_RegBus] csr_wdata_o,
-    output wire csr_we_o,
-    output wire[`YX_MemAddrBus] csr_waddr_o,
     output wire hold_flag_o,
     output wire jump_flag_o,
     output wire[`YX_InstAddrBus] jump_addr_o
@@ -116,9 +108,6 @@ module yx_ex(
     assign hold_flag_o = rv_hold_flag | sid_hold_flag | rt_hold_flag | if_hold_flag;
     assign jump_flag_o = ext_active ? `YX_JumpDisable : rv_jump_flag;
     assign jump_addr_o = ext_active ? `YX_ZeroWord : rv_jump_addr;
-    assign csr_wdata_o = `YX_ZeroWord;
-    assign csr_we_o = `YX_WriteDisable;
-    assign csr_waddr_o = `YX_ZeroWord;
 
     yx_sid u_sid(
         .clk(clk),
@@ -434,6 +423,5 @@ module yx_if_ext(
     end
 
 endmodule
-
 
 

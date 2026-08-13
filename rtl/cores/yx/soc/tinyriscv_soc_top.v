@@ -118,7 +118,6 @@ module yx_tinyriscv_soc_top(
         .rib_hold_flag_i(rib_hold_flag_o),
         .bridge_hold_flag_i(bridge_hold),
         .uart_debug_i(uart_debug_pin),
-        .int_i(`YX_INT_NONE),
         .regfile_we_o(regfile_we_o),
         .regfile_waddr_o(regfile_waddr_o),
         .regfile_wdata_o(regfile_wdata_o),

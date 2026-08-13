@@ -19,12 +19,12 @@ module pjy_sid_soc_tb;
     initial begin
         expected[0]=8'h32; expected[1]=8'h30; expected[2]=8'h32; expected[3]=8'h35;
         expected[4]=8'h32; expected[5]=8'h31; expected[6]=8'h30; expected[7]=8'h39;
-        // PJY student ID is 2025210902.
-        expected[8]=8'h30; expected[9]=8'h32;
+        // PJY student ID is 2025210905.
+        expected[8]=8'h30; expected[9]=8'h35;
         $readmemh("../inputs/pjy/test_command/Extend_Inst_Example/sID/sID_inst.data", u_top.u_ext_rom._rom);
         repeat(8) @(posedge clk); rst=`PJY_RstDisable;
         wait(rx_count==10); wait(u_top.u_soc.u_sid_uart_sender.done_o==1'b1); repeat(20) @(posedge clk);
-        if(errors==0) $display("TEST_PASS PJY_sID received_2025210902");
+        if(errors==0) $display("TEST_PASS PJY_sID received_2025210905");
         else $display("TEST_FAIL PJY_sID errors=%0d",errors);
         $finish;
     end

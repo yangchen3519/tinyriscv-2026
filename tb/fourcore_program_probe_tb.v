@@ -4,7 +4,7 @@
 // regression report classifies that observation against the design contract.
 module fourcore_program_probe_tb;
     reg clk = 0, rst = 0;
-    reg [2:0] chip_sel = 0;
+    reg [1:0] chip_sel = 0;
     integer core = 0, cycles = 0, max_cycles = 50000;
     reg [1023:0] inst_file;
     wire uart_tx, i2c_scl, i2c_sda, over, succ;
@@ -21,7 +21,7 @@ module fourcore_program_probe_tb;
         if (!$value$plusargs("CORE=%d", core)) core = 0;
         if (!$value$plusargs("MAX_CYCLES=%d", max_cycles)) max_cycles = 50000;
         $readmemh(inst_file, dut.u_rom._rom);
-        @(negedge clk); rst = 0; chip_sel = core[2:0];
+        @(negedge clk); rst = 0; chip_sel = core[1:0];
         repeat (8) @(posedge clk);
         @(negedge clk); rst = 1;
         while (cycles < max_cycles && dut.u_chip.status_x26 !== 32'h1) begin

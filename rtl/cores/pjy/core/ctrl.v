@@ -33,11 +33,7 @@ module pjy_ctrl(
     input wire hold_flag_mem_i,
     // TASK1_EXT_MEM_END
 
-    // from jtag
-    input wire jtag_halt_flag_i,
-
-    // from clint
-    input wire hold_flag_clint_i,
+    input wire debug_halt_flag_i,
 
     output reg[`PJY_Hold_Flag_Bus] hold_flag_o,
 
@@ -54,7 +50,7 @@ module pjy_ctrl(
         // 默认不暂停
         hold_flag_o = `PJY_Hold_None;
         // 按优先级处理不同模块的请求
-        if (jump_flag_i == `PJY_JumpEnable || hold_flag_ex_i == `PJY_HoldEnable || hold_flag_clint_i == `PJY_HoldEnable) begin
+        if (jump_flag_i == `PJY_JumpEnable || hold_flag_ex_i == `PJY_HoldEnable) begin
             // 暂停整条流水线
             hold_flag_o = `PJY_Hold_Id;
         // TASK_BASIC_UART_BEGIN: 片外取指等待暂停PC并向IF/ID插入NOP，避免EX阶段指令重复执行
@@ -64,7 +60,7 @@ module pjy_ctrl(
         end else if (hold_flag_rib_i == `PJY_HoldEnable) begin
             // 暂停PC，即取指地址不变
             hold_flag_o = `PJY_Hold_Pc;
-        end else if (jtag_halt_flag_i == `PJY_HoldEnable) begin
+        end else if (debug_halt_flag_i == `PJY_HoldEnable) begin
             // 暂停整条流水线
             hold_flag_o = `PJY_Hold_Id;
         end else begin

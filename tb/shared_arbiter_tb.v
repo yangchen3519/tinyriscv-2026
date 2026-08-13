@@ -10,7 +10,7 @@ module shared_arbiter_tb;
 `endif
     reg clk = 1'b0;
     reg rst = 1'b0;
-    reg [2:0] chip_sel = 3'b000;
+    reg [1:0] chip_sel = 2'b00;
     reg uart_debug_en = 1'b0;
     reg uart_rx = 1'b1;
     reg [7:0] ext_mem_data_i = 8'b0;
@@ -34,7 +34,7 @@ module shared_arbiter_tb;
     );
 
     task select_core;
-        input [2:0] value;
+        input [1:0] value;
         begin
             @(negedge clk); rst = 1'b0; chip_sel = value;
             repeat (3) @(posedge clk);
@@ -95,7 +95,7 @@ module shared_arbiter_tb;
     initial begin
         // Each selected core can write the one shared register file and PWM.
         for (core = 0; core < 4; core = core + 1) begin
-            select_core(core[2:0]);
+            select_core(core[1:0]);
             force_reg26_write(core, 32'h1000_0000 + core);
             if (dut.status_x26 !== (32'h1000_0000 + core)) begin
                 $display("FAIL core %0d shared-reg write", core); errors = errors + 1;
@@ -108,13 +108,13 @@ module shared_arbiter_tb;
             // chip_sel changes outside reset must not switch ownership.
             chip_sel = (core + 1) & 3;
             repeat (2) @(posedge clk); #1;
-            if (dut.selected !== core[2:0]) begin
+            if (dut.selected !== core[1:0]) begin
                 $display("FAIL live chip_sel switch was accepted"); errors = errors + 1;
             end
         end
 
         // An unselected request cannot alter shared resources.
-        select_core(3'b000);
+        select_core(2'b00);
         force_pwm_write(1, 32'h6000_0000, 32'hdead_beef);
         if (dut.u_shared_pwm.pwm_a0 !== 32'b0) begin
             $display("FAIL unselected PWM request was accepted"); errors = errors + 1;
@@ -124,15 +124,8 @@ module shared_arbiter_tb;
             $display("FAIL unselected register write was accepted"); errors = errors + 1;
         end
 
-        // Invalid selections gate all writes and drive safe external values.
-        select_core(3'b100);
-        force_pwm_write(0, 32'h6000_0000, 32'hface_cafe);
-        if (dut.u_shared_pwm.pwm_a0 !== 32'b0 || ext_mem_data_o !== 8'b0 || uart_tx !== 1'b1) begin
-            $display("FAIL invalid-selection safety"); errors = errors + 1;
-        end
-
         // Representative period/duty/enable waveform on the shared YC PWM.
-        select_core(3'b010);
+        select_core(2'b10);
         force_pwm_write(2, 32'h6000_0000, 32'd8);
         force_pwm_write(2, 32'h6010_0000, 32'd3);
         force_pwm_write(2, 32'h6004_0000, 32'd1);

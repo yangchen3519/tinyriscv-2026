@@ -28,9 +28,6 @@ module pjy_id_ex(
     input wire[`PJY_RegAddrBus] reg_waddr_i,    // 写通用寄存器地址
     input wire[`PJY_RegBus] reg1_rdata_i,       // 通用寄存器1读数据
     input wire[`PJY_RegBus] reg2_rdata_i,       // 通用寄存器2读数据
-    input wire csr_we_i,                    // 写CSR寄存器标志
-    input wire[`PJY_MemAddrBus] csr_waddr_i,    // 写CSR寄存器地址
-    input wire[`PJY_RegBus] csr_rdata_i,        // CSR寄存器读数据
     input wire[`PJY_MemAddrBus] op1_i,
     input wire[`PJY_MemAddrBus] op2_i,
     input wire[`PJY_MemAddrBus] op1_jump_i,
@@ -47,10 +44,7 @@ module pjy_id_ex(
     output wire reg_we_o,                    // 写通用寄存器标志
     output wire[`PJY_RegAddrBus] reg_waddr_o,    // 写通用寄存器地址
     output wire[`PJY_RegBus] reg1_rdata_o,       // 通用寄存器1读数据
-    output wire[`PJY_RegBus] reg2_rdata_o,       // 通用寄存器2读数据
-    output wire csr_we_o,                    // 写CSR寄存器标志
-    output wire[`PJY_MemAddrBus] csr_waddr_o,    // 写CSR寄存器地址
-    output wire[`PJY_RegBus] csr_rdata_o         // CSR寄存器读数据
+    output wire[`PJY_RegBus] reg2_rdata_o        // 通用寄存器2读数据
 
     );
 
@@ -79,18 +73,6 @@ module pjy_id_ex(
     wire[`PJY_RegBus] reg2_rdata;
     pjy_gen_pipe_dff #(32) reg2_rdata_ff(clk, rst, hold_en, `PJY_ZeroWord, reg2_rdata_i, reg2_rdata);
     assign reg2_rdata_o = reg2_rdata;
-
-    wire csr_we;
-    pjy_gen_pipe_dff #(1) csr_we_ff(clk, rst, hold_en, `PJY_WriteDisable, csr_we_i, csr_we);
-    assign csr_we_o = csr_we;
-
-    wire[`PJY_MemAddrBus] csr_waddr;
-    pjy_gen_pipe_dff #(32) csr_waddr_ff(clk, rst, hold_en, `PJY_ZeroWord, csr_waddr_i, csr_waddr);
-    assign csr_waddr_o = csr_waddr;
-
-    wire[`PJY_RegBus] csr_rdata;
-    pjy_gen_pipe_dff #(32) csr_rdata_ff(clk, rst, hold_en, `PJY_ZeroWord, csr_rdata_i, csr_rdata);
-    assign csr_rdata_o = csr_rdata;
 
     wire[`PJY_MemAddrBus] op1;
     pjy_gen_pipe_dff #(32) op1_ff(clk, rst, hold_en, `PJY_ZeroWord, op1_i, op1);

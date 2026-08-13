@@ -30,18 +30,12 @@ module pjy_id(
     input wire[`PJY_RegBus] reg1_rdata_i,        // 通用寄存器1输入数据
     input wire[`PJY_RegBus] reg2_rdata_i,        // 通用寄存器2输入数据
 
-    // from csr reg
-    input wire[`PJY_RegBus] csr_rdata_i,         // CSR寄存器输入数据
-
     // from ex
     input wire ex_jump_flag_i,               // 跳转标志
 
     // to regs
     output reg[`PJY_RegAddrBus] reg1_raddr_o,    // 读通用寄存器1地址
     output reg[`PJY_RegAddrBus] reg2_raddr_o,    // 读通用寄存器2地址
-
-    // to csr reg
-    output reg[`PJY_MemAddrBus] csr_raddr_o,     // 读CSR寄存器地址
 
     // to ex
     output reg[`PJY_MemAddrBus] op1_o,
@@ -53,10 +47,7 @@ module pjy_id(
     output reg[`PJY_RegBus] reg1_rdata_o,        // 通用寄存器1数据
     output reg[`PJY_RegBus] reg2_rdata_o,        // 通用寄存器2数据
     output reg reg_we_o,                     // 写通用寄存器标志
-    output reg[`PJY_RegAddrBus] reg_waddr_o,     // 写通用寄存器地址
-    output reg csr_we_o,                     // 写CSR寄存器标志
-    output reg[`PJY_RegBus] csr_rdata_o,         // CSR寄存器数据
-    output reg[`PJY_MemAddrBus] csr_waddr_o      // 写CSR寄存器地址
+    output reg[`PJY_RegAddrBus] reg_waddr_o      // 写通用寄存器地址
 
     );
 
@@ -73,10 +64,6 @@ module pjy_id(
         inst_addr_o = inst_addr_i;
         reg1_rdata_o = reg1_rdata_i;
         reg2_rdata_o = reg2_rdata_i;
-        csr_rdata_o = csr_rdata_i;
-        csr_raddr_o = `PJY_ZeroWord;
-        csr_waddr_o = `PJY_ZeroWord;
-        csr_we_o = `PJY_WriteDisable;
         op1_o = `PJY_ZeroWord;
         op2_o = `PJY_ZeroWord;
         op1_jump_o = `PJY_ZeroWord;
@@ -231,15 +218,6 @@ module pjy_id(
                 reg2_raddr_o = `PJY_ZeroReg;
                 op1_jump_o = inst_addr_i;
                 op2_jump_o = 32'h4;
-            end
-            `PJY_INST_CSR: begin
-                reg_we_o = `PJY_WriteDisable;
-                reg_waddr_o = `PJY_ZeroReg;
-                reg1_raddr_o = `PJY_ZeroReg;
-                reg2_raddr_o = `PJY_ZeroReg;
-                csr_raddr_o = `PJY_ZeroWord;
-                csr_waddr_o = `PJY_ZeroWord;
-                csr_we_o = `PJY_WriteDisable;
             end
             // TASK5_RT_BEGIN
             // TASK6_IF_BEGIN

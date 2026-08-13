@@ -29,11 +29,6 @@ module pjy_ex(
     input wire[`PJY_RegAddrBus] reg_waddr_i,    // 写通用寄存器地址
     input wire[`PJY_RegBus] reg1_rdata_i,       // 通用寄存器1输入数据
     input wire[`PJY_RegBus] reg2_rdata_i,       // 通用寄存器2输入数据
-    input wire csr_we_i,                    // 是否写CSR寄存器
-    input wire[`PJY_MemAddrBus] csr_waddr_i,    // 写CSR寄存器地址
-    input wire[`PJY_RegBus] csr_rdata_i,        // CSR寄存器输入数据
-    input wire int_assert_i,                // 中断发生标志
-    input wire[`PJY_InstAddrBus] int_addr_i,    // 中断跳转地址
     input wire[`PJY_MemAddrBus] op1_i,
     input wire[`PJY_MemAddrBus] op2_i,
     input wire[`PJY_MemAddrBus] op1_jump_i,
@@ -41,12 +36,6 @@ module pjy_ex(
 
     // from mem
     input wire[`PJY_MemBus] mem_rdata_i,        // 内存输入数据
-
-    // from div
-    input wire div_ready_i,                 // 除法运算完成标志
-    input wire[`PJY_RegBus] div_result_i,       // 除法运算结果
-    input wire div_busy_i,                  // 除法运算忙标志
-    input wire[`PJY_RegAddrBus] div_reg_waddr_i,// 除法运算结束后要写的寄存器地址
 
     // to mem
     output reg[`PJY_MemBus] mem_wdata_o,        // 写内存数据
@@ -59,18 +48,6 @@ module pjy_ex(
     output wire[`PJY_RegBus] reg_wdata_o,       // 写寄存器数据
     output wire reg_we_o,                   // 是否要写通用寄存器
     output wire[`PJY_RegAddrBus] reg_waddr_o,   // 写通用寄存器地址
-
-    // to csr reg
-    output reg[`PJY_RegBus] csr_wdata_o,        // 写CSR寄存器数据
-    output wire csr_we_o,                   // 是否要写CSR寄存器
-    output wire[`PJY_MemAddrBus] csr_waddr_o,   // 写CSR寄存器地址
-
-    // to div
-    output wire div_start_o,                // 开始除法运算标志
-    output reg[`PJY_RegBus] div_dividend_o,     // 被除数
-    output reg[`PJY_RegBus] div_divisor_o,      // 除数
-    output reg[2:0] div_op_o,               // 具体是哪一条除法指令
-    output reg[`PJY_RegAddrBus] div_reg_waddr_o,// 除法运算结束后要写的寄存器地址
 
     // to ctrl
     output wire hold_flag_o,                // 是否暂停标志
@@ -132,18 +109,11 @@ module pjy_ex(
     reg[`PJY_RegBus] reg_wdata;
     reg reg_we;
     reg[`PJY_RegAddrBus] reg_waddr;
-    reg[`PJY_RegBus] div_wdata;
-    reg div_we;
-    reg[`PJY_RegAddrBus] div_waddr;
-    reg div_hold_flag;
-    reg div_jump_flag;
-    reg[`PJY_InstAddrBus] div_jump_addr;
     reg hold_flag;
     reg jump_flag;
     reg[`PJY_InstAddrBus] jump_addr;
     reg mem_we;
     reg mem_req;
-    reg div_start;
 
     assign opcode = inst_i[6:0];
     assign funct3 = inst_i[14:12];
@@ -185,83 +155,20 @@ module pjy_ex(
     assign mem_raddr_index = (reg1_rdata_i + {{20{inst_i[31]}}, inst_i[31:20]}) & 2'b11;
     assign mem_waddr_index = (reg1_rdata_i + {{20{inst_i[31]}}, inst_i[31:25], inst_i[11:7]}) & 2'b11;
 
-    assign div_start_o = (int_assert_i == `PJY_INT_ASSERT)? `PJY_DivStop: div_start;
-
-    assign reg_wdata_o = reg_wdata | div_wdata;
-    // 响应中断时不写通用寄存器
-    assign reg_we_o = (int_assert_i == `PJY_INT_ASSERT)? `PJY_WriteDisable: (reg_we || div_we);
-    assign reg_waddr_o = reg_waddr | div_waddr;
-
-    // 响应中断时不写内存
-    assign mem_we_o = (int_assert_i == `PJY_INT_ASSERT)? `PJY_WriteDisable: mem_we;
-
-    // 响应中断时不向总线请求访问内存
-    assign mem_req_o = (int_assert_i == `PJY_INT_ASSERT)? `PJY_RIB_NREQ: mem_req;
-
-    assign hold_flag_o = hold_flag || div_hold_flag;
-    assign jump_flag_o = jump_flag || div_jump_flag || ((int_assert_i == `PJY_INT_ASSERT)? `PJY_JumpEnable: `PJY_JumpDisable);
-    assign jump_addr_o = (int_assert_i == `PJY_INT_ASSERT)? int_addr_i: (jump_addr | div_jump_addr);
-
-    // 响应中断时不写CSR寄存器
-    assign csr_we_o = (int_assert_i == `PJY_INT_ASSERT)? `PJY_WriteDisable: csr_we_i;
-    assign csr_waddr_o = csr_waddr_i;
-
-
-    // 处理除法指令
-    always @ (*) begin
-        div_dividend_o = reg1_rdata_i;
-        div_divisor_o = reg2_rdata_i;
-        div_op_o = funct3;
-        div_reg_waddr_o = reg_waddr_i;
-        if (1'b0) begin
-            div_we = `PJY_WriteDisable;
-            div_wdata = `PJY_ZeroWord;
-            div_waddr = `PJY_ZeroWord;
-            case (funct3)
-                `PJY_INST_DIV, `PJY_INST_DIVU, `PJY_INST_REM, `PJY_INST_REMU: begin
-                    div_start = `PJY_DivStart;
-                    div_jump_flag = `PJY_JumpEnable;
-                    div_hold_flag = `PJY_HoldEnable;
-                    div_jump_addr = op1_jump_add_op2_jump_res;
-                end
-                default: begin
-                    div_start = `PJY_DivStop;
-                    div_jump_flag = `PJY_JumpDisable;
-                    div_hold_flag = `PJY_HoldDisable;
-                    div_jump_addr = `PJY_ZeroWord;
-                end
-            endcase
-        end else begin
-            div_jump_flag = `PJY_JumpDisable;
-            div_jump_addr = `PJY_ZeroWord;
-            if (div_busy_i == `PJY_True) begin
-                div_start = `PJY_DivStart;
-                div_we = `PJY_WriteDisable;
-                div_wdata = `PJY_ZeroWord;
-                div_waddr = `PJY_ZeroWord;
-                div_hold_flag = `PJY_HoldEnable;
-            end else begin
-                div_start = `PJY_DivStop;
-                div_hold_flag = `PJY_HoldDisable;
-                if (div_ready_i == `PJY_DivResultReady) begin
-                    div_wdata = div_result_i;
-                    div_waddr = div_reg_waddr_i;
-                    div_we = `PJY_WriteEnable;
-                end else begin
-                    div_we = `PJY_WriteDisable;
-                    div_wdata = `PJY_ZeroWord;
-                    div_waddr = `PJY_ZeroWord;
-                end
-            end
-        end
-    end
+    assign reg_wdata_o = reg_wdata;
+    assign reg_we_o = reg_we;
+    assign reg_waddr_o = reg_waddr;
+    assign mem_we_o = mem_we;
+    assign mem_req_o = mem_req;
+    assign hold_flag_o = hold_flag;
+    assign jump_flag_o = jump_flag;
+    assign jump_addr_o = jump_addr;
 
     // 执行
     always @ (*) begin
         reg_we = reg_we_i;
         reg_waddr = reg_waddr_i;
         mem_req = `PJY_RIB_NREQ;
-        csr_wdata_o = `PJY_ZeroWord;
 
         case (opcode)
             `PJY_INST_TYPE_I: begin
@@ -757,51 +664,6 @@ module pjy_ex(
                 jump_flag = `PJY_JumpEnable;
                 jump_addr = op1_jump_add_op2_jump_res;
             end
-            `PJY_INST_CSR: begin
-                jump_flag = `PJY_JumpDisable;
-                hold_flag = `PJY_HoldDisable;
-                jump_addr = `PJY_ZeroWord;
-                mem_wdata_o = `PJY_ZeroWord;
-                mem_raddr_o = `PJY_ZeroWord;
-                mem_waddr_o = `PJY_ZeroWord;
-                mem_we = `PJY_WriteDisable;
-                case (funct3)
-                    `PJY_INST_CSRRW: begin
-                        csr_wdata_o = reg1_rdata_i;
-                        reg_wdata = csr_rdata_i;
-                    end
-                    `PJY_INST_CSRRS: begin
-                        csr_wdata_o = reg1_rdata_i | csr_rdata_i;
-                        reg_wdata = csr_rdata_i;
-                    end
-                    `PJY_INST_CSRRC: begin
-                        csr_wdata_o = csr_rdata_i & (~reg1_rdata_i);
-                        reg_wdata = csr_rdata_i;
-                    end
-                    `PJY_INST_CSRRWI: begin
-                        csr_wdata_o = {27'h0, uimm};
-                        reg_wdata = csr_rdata_i;
-                    end
-                    `PJY_INST_CSRRSI: begin
-                        csr_wdata_o = {27'h0, uimm} | csr_rdata_i;
-                        reg_wdata = csr_rdata_i;
-                    end
-                    `PJY_INST_CSRRCI: begin
-                        csr_wdata_o = (~{27'h0, uimm}) & csr_rdata_i;
-                        reg_wdata = csr_rdata_i;
-                    end
-                    default: begin
-                        jump_flag = `PJY_JumpDisable;
-                        hold_flag = `PJY_HoldDisable;
-                        jump_addr = `PJY_ZeroWord;
-                        mem_wdata_o = `PJY_ZeroWord;
-                        mem_raddr_o = `PJY_ZeroWord;
-                        mem_waddr_o = `PJY_ZeroWord;
-                        mem_we = `PJY_WriteDisable;
-                        reg_wdata = `PJY_ZeroWord;
-                    end
-                endcase
-            end
             // TASK4_SID_BEGIN: Send ID is a side-effect instruction with no register write
             `PJY_INST_SID: begin
                 case (funct3)
@@ -843,7 +705,7 @@ module pjy_ex(
                         reg_we = (if_fire && (if_done_i == `PJY_False)) ? `PJY_WriteDisable : `PJY_WriteEnable;
                         reg_waddr = reg_waddr_i;
                         if (if_imm_sext != `PJY_ZeroWord) begin
-                            reg_wdata = reg1_rdata_i + if_imm_sext;
+                            reg_wdata = reg1_rdata_i + if_imm_sext + 1;
                         end else if (reg1_rdata_i >= reg2_rdata_i) begin
                             reg_wdata = `PJY_ZeroWord;
                         end else begin

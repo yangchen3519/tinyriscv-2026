@@ -27,8 +27,6 @@ module pjy_if_id(
 
     input wire[`PJY_Hold_Flag_Bus] hold_flag_i, // 流水线暂停标志
 
-    input wire[`PJY_INT_BUS] int_flag_i,        // 外设中断输入信号
-    output wire[`PJY_INT_BUS] int_flag_o,
 
     output wire[`PJY_InstBus] inst_o,           // 指令内容
     output wire[`PJY_InstAddrBus] inst_addr_o   // 指令地址
@@ -44,9 +42,5 @@ module pjy_if_id(
     wire[`PJY_InstAddrBus] inst_addr;
     pjy_gen_pipe_dff #(32) inst_addr_ff(clk, rst, hold_en, `PJY_ZeroWord, inst_addr_i, inst_addr);
     assign inst_addr_o = inst_addr;
-
-    wire[`PJY_INT_BUS] int_flag;
-    pjy_gen_pipe_dff #(8) int_ff(clk, rst, hold_en, `PJY_INT_NONE, int_flag_i, int_flag);
-    assign int_flag_o = int_flag;
 
 endmodule

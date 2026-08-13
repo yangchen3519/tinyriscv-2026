@@ -13,6 +13,7 @@
  See the License for the specific language governing permissions and     
  limitations under the License.                                          
  */
+ `include "yc_defines.vh"
 
 // 带默认值和控制信号的流水线触发器
 module yc_gen_pipe_dff #(

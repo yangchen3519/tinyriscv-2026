@@ -4,12 +4,12 @@
 // FPGA/simulation-only wrapper.  The chip contains four private chip-side
 // bridges; their matching FPGA protocol decoders arbitrate one YC ROM/RAM.
 module tinyriscv_4core_fpga_top(
- input wire clk,input wire rst,input wire[2:0]chip_sel,
+ input wire clk,input wire rst,input wire[1:0]chip_sel,
  input wire uart_debug_en,input wire uart_rx,output wire uart_tx,
  output wire[3:0]PWM_o,inout wire i2c_scl,inout wire i2c_sda,
  output wire over,output wire succ);
- localparam YC=3'b000,YX=3'b001,PJY=3'b010,KH=3'b011;
- reg[2:0]selected;
+ localparam YC=2'b00,YX=2'b01,PJY=2'b10,KH=2'b11;
+ reg[1:0]selected;
  always @(posedge clk)if(!rst)selected<=chip_sel;
  wire syc=selected==YC,syx=selected==YX,spjy=selected==PJY,skh=selected==KH;
  wire[7:0]chip_out,chip_in;

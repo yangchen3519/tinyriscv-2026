@@ -8,7 +8,7 @@ module shared_uart_debug_tb;
     end
 `endif
     reg clk=0, rst=0;
-    reg[2:0] chip_sel=3'b010;
+    reg[1:0] chip_sel=2'b10;
     reg uart_debug_en=1'b1, uart_rx=1'b1;
     wire uart_tx, i2c_scl, i2c_sda, over, succ;
     wire[3:0] PWM_o;
@@ -27,7 +27,7 @@ module shared_uart_debug_tb;
         uart_rx=1'b1; #8680;
     end endtask
     initial begin
-        if($value$plusargs("CHIP_SEL=%d",selected_arg)) chip_sel=selected_arg[2:0];
+        if($value$plusargs("CHIP_SEL=%d",selected_arg)) chip_sel=selected_arg[1:0];
         for(i=0;i<35;i=i+1) packet[i]=8'h00;
         // Valid first packet: sequence 0, filename "a", file size 0,
         // Modbus CRC16 over bytes 1..32 = 16'h3836 (low byte first).

@@ -5,7 +5,7 @@
 module tinyriscv_4core_top_IO (
     input  wire       clk,
     input  wire       rst,
-    input  wire [2:0] chip_sel,
+    input  wire [1:0] chip_sel,
     input  wire       uart_debug_en,
     input  wire       uart_rx,
     output wire       uart_tx,
@@ -20,13 +20,14 @@ module tinyriscv_4core_top_IO (
     output wire       ext_mem_rx_ready_o,
     output wire       over,
     output wire       succ,
-    input  wire       spare_in,
+    input  wire [1:0] spare_in,
     output wire [1:0] spare_out
 );
 
     wire       clk_core;
     wire       rst_core;
-    wire [2:0] chip_sel_core;
+    wire [1:0] chip_sel_core;
+    wire       unused_legacy_jtag_tms_core;
     wire       uart_debug_en_core;
     wire       uart_rx_core;
     wire       uart_tx_core;
@@ -44,18 +45,6 @@ module tinyriscv_4core_top_IO (
     wire       over_core;
     wire       succ_core;
     wire       unused_spare_in_core;
-    wire [2:0] chip_sel_logic;
-
-    // The fixed board/backend pins retain the legacy active-low key coding,
-    // while the merged logic top uses a simulator-friendly logical coding:
-    //   physical 111/110/101/011 -> logical 000/001/010/011.
-    // Any other physical value is translated to an invalid logical selector
-    // so that all cores and shared-resource write enables remain disabled.
-    assign chip_sel_logic = (chip_sel_core == 3'b111) ? 3'b000 :
-                            (chip_sel_core == 3'b110) ? 3'b001 :
-                            (chip_sel_core == 3'b101) ? 3'b010 :
-                            (chip_sel_core == 3'b011) ? 3'b011 :
-                                                       3'b111;
 
     // Input PADs.
     PDDW0204CDG mclk       (.OEN(1'b1), .I(1'b0), .PAD(clk),
@@ -67,13 +56,13 @@ module tinyriscv_4core_top_IO (
     PDDW0204CDG muart_rx   (.OEN(1'b1), .I(1'b0), .PAD(uart_rx),
                             .C(uart_rx_core), .DS(1'b0), .PE(1'b0), .IE(1'b1));
 
-    // The fixed legacy chip-select/JTAG locations carry the three selector bits.
+    // The fixed legacy chip-select/JTAG locations carry the two selector bits.
     PDDW0204CDG mchip_sel  (.OEN(1'b1), .I(1'b0), .PAD(chip_sel[0]),
                             .C(chip_sel_core[0]), .DS(1'b0), .PE(1'b0), .IE(1'b1));
     PDDW0204CDG mjtag_TCK  (.OEN(1'b1), .I(1'b0), .PAD(chip_sel[1]),
                             .C(chip_sel_core[1]), .DS(1'b0), .PE(1'b0), .IE(1'b1));
-    PDDW0204CDG mjtag_TMS  (.OEN(1'b1), .I(1'b0), .PAD(chip_sel[2]),
-                            .C(chip_sel_core[2]), .DS(1'b0), .PE(1'b0), .IE(1'b1));
+    PDDW0204CDG mjtag_TMS  (.OEN(1'b1), .I(1'b0), .PAD(spare_in[0]),
+                            .C(unused_legacy_jtag_tms_core), .DS(1'b0), .PE(1'b0), .IE(1'b1));
 
     // Fixed SPI locations are repurposed for external-memory handshaking.
     PDDW0204CDG mspi_miso  (.OEN(1'b1), .I(1'b0), .PAD(ext_mem_tx_ready_i),
@@ -92,7 +81,7 @@ module tinyriscv_4core_top_IO (
     PDDW0204CDG mgpio7 (.OEN(1'b1), .I(1'b0), .PAD(ext_mem_data_i[7]), .C(ext_mem_data_i_core[7]), .DS(1'b0), .PE(1'b0), .IE(1'b1));
 
     // One unused legacy input PAD is retained because io.file fixes its position.
-    PDDW0204CDG mjtag_TDI  (.OEN(1'b1), .I(1'b0), .PAD(spare_in),
+    PDDW0204CDG mjtag_TDI  (.OEN(1'b1), .I(1'b0), .PAD(spare_in[1]),
                             .C(unused_spare_in_core), .DS(1'b0), .PE(1'b0), .IE(1'b1));
 
     // Output PADs.
@@ -132,7 +121,7 @@ module tinyriscv_4core_top_IO (
     tinyriscv_4core_top u_fourcore (
         .clk(clk_core),
         .rst(rst_core),
-        .chip_sel(chip_sel_logic),
+        .chip_sel(chip_sel_core),
         .uart_debug_en(uart_debug_en_core),
         .uart_rx(uart_rx_core),
         .uart_tx(uart_tx_core),

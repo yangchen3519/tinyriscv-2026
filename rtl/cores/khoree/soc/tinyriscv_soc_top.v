@@ -80,12 +80,6 @@ module khoree_tinyriscv_soc_top(
 
     // make external signals internal
     reg over;               // ?????????????
-    wire spi_miso;          // SPI MISO??
-    assign spi_miso = 1'b0;
-    wire spi_mosi;          // SPI MOSI??
-    wire spi_ss;            // SPI SS??
-    wire spi_clk;           // SPI CLK??
-
     // master 0 interface
     wire[`KHOREE_MemAddrBus] m0_addr_i;
     wire[`KHOREE_MemBus] m0_data_i;
@@ -148,7 +142,6 @@ module khoree_tinyriscv_soc_top(
     // slave 5 interface
     wire[`KHOREE_MemAddrBus] s5_addr_o;
     wire[`KHOREE_MemBus] s5_data_o;
-    wire[`KHOREE_MemBus] s5_data_i;
     wire s5_we_o;
 
     // slave 6 interface: pwm
@@ -351,7 +344,7 @@ module khoree_tinyriscv_soc_top(
         // slave 5 interface
         .s5_addr_o(s5_addr_o),
         .s5_data_o(s5_data_o),
-        .s5_data_i(s5_data_i),
+        .s5_data_i(`KHOREE_ZeroWord),
         .s5_we_o(s5_we_o),
 
         // slave 6 interface

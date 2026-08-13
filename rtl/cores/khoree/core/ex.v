@@ -136,7 +136,15 @@ module khoree_ex(
     always @ (*) begin
         reg_we = reg_we_i;
         reg_waddr = reg_waddr_i;
+        reg_wdata = `KHOREE_ZeroWord;
         mem_req = `KHOREE_RIB_NREQ;
+        mem_wdata_o = `KHOREE_ZeroWord;
+        mem_raddr_o = `KHOREE_ZeroWord;
+        mem_waddr_o = `KHOREE_ZeroWord;
+        mem_we = `KHOREE_WriteDisable;
+        hold_flag = `KHOREE_HoldDisable;
+        jump_flag = `KHOREE_JumpDisable;
+        jump_addr = `KHOREE_ZeroWord;
 
         case (opcode)
             `KHOREE_INST_TYPE_I: begin

@@ -25,8 +25,6 @@ module pjy_tinyriscv_soc_top(
     output reg over,         // 测试是否完成信号
     output reg succ,         // 测试是否成功信号
 
-    output wire halted_ind,  // jtag是否已经halt住CPU信号
-
     input wire uart_debug_pin, // 串口下载使能引脚
 
     output wire uart_tx_pin, // UART发�?�引�?
@@ -210,18 +208,6 @@ module pjy_tinyriscv_soc_top(
     wire mem_hold_flag_o;
     // TASK1_EXT_MEM_END
 
-    // jtag
-    wire jtag_halt_req_o;
-    wire jtag_reset_req_o;
-    wire[`PJY_RegAddrBus] jtag_reg_addr_o;
-    wire[`PJY_RegBus] jtag_reg_data_o;
-    wire jtag_reg_we_o;
-    wire[`PJY_RegBus] jtag_reg_data_i;
-    assign jtag_halt_req_o = 1'b0;
-    assign jtag_reset_req_o = 1'b0;
-    assign jtag_reg_addr_o = 5'b0;
-    assign jtag_reg_data_o = 32'b0;
-    assign jtag_reg_we_o = 1'b0;
     assign m2_addr_i = 32'b0;
     assign m2_data_i = 32'b0;
     assign m2_req_i = 1'b0;
@@ -243,9 +229,6 @@ module pjy_tinyriscv_soc_top(
                          (((debug_addr_i[31:28] != 4'h0) && (debug_addr_i[31:28] != 4'h1)) ||
                           !mem_hold_flag_o);
 
-    // tinyriscv
-    wire[`PJY_INT_BUS] int_flag;
-
     // TASK0_REMOVE_PERIPS_BEGIN: Timer外设删除，保留原中断线声明作为注�?
     // timer0
     // wire timer0_int;
@@ -259,17 +242,10 @@ module pjy_tinyriscv_soc_top(
     // TASK0_REMOVE_PERIPS_END
 
     // TASK0_REMOVE_PERIPS_BEGIN: Timer外设删除后不再产生中�?
-    // assign int_flag = {7'h0, timer0_int};
-    assign int_flag = `PJY_INT_NONE;
     assign s2_data_i = `PJY_ZeroWord;
     assign s4_data_i = `PJY_ZeroWord;
     assign s5_data_i = `PJY_ZeroWord;
     // TASK0_REMOVE_PERIPS_END
-
-    // 低电平点亮LED
-    // 低电平表示已经halt住CPU
-    assign halted_ind = ~jtag_halt_req_o;
-
 
     always @ (posedge clk) begin
         if (rst == `PJY_RstEnable) begin
@@ -294,19 +270,11 @@ module pjy_tinyriscv_soc_top(
         .rib_pc_addr_o(m1_addr_i),
         .rib_pc_data_i(m1_data_o),
 
-        .jtag_reg_addr_i(jtag_reg_addr_o),
-        .jtag_reg_data_i(jtag_reg_data_o),
-        .jtag_reg_we_i(jtag_reg_we_o),
-        .jtag_reg_data_o(jtag_reg_data_i),
-
         .rib_hold_flag_i(rib_hold_flag_o),
         // TASK1_EXT_MEM_BEGIN: 片外ROM/RAM访问期间冻结流水�?
         .mem_hold_flag_i(mem_hold_flag_o),
         // TASK1_EXT_MEM_END
-        .jtag_halt_flag_i(jtag_halt_req_o | uart_debug_pin),
-        .jtag_reset_flag_i(jtag_reset_req_o),
-
-        .int_i(int_flag),
+        .debug_halt_flag_i(uart_debug_pin),
         // TASK4_SID_BEGIN: Send ID extension handshake
         .sid_start_o(sid_start),
         .sid_busy_i(sid_busy),
@@ -364,7 +332,7 @@ module pjy_tinyriscv_soc_top(
     //     .data_o(s1_data_i)
     // );
 
-    // Shared YC memory bridge is instantiated once in tinyriscv_4core_top.
+    // The PJY chip-side memory bridge is instantiated in tinyriscv_4core_top.
     // Data RAM has priority over the instruction ROM request.
     assign mem_req_o = s1_req_o | s0_req_o;
     assign mem_we_o = s1_req_o ? s1_we_o : s0_we_o;

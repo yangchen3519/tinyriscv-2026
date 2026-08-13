@@ -14,7 +14,6 @@ module yx_tinyriscv_core(
     input wire rib_hold_flag_i,
     input wire bridge_hold_flag_i,
     input wire uart_debug_i,
-    input wire[`YX_INT_BUS] int_i,
     output wire regfile_we_o,
     output wire[4:0] regfile_waddr_o,
     output wire[31:0] regfile_wdata_o,
@@ -204,8 +203,6 @@ module yx_tinyriscv_core(
         .rst(rst),
         .inst_i(rib_pc_data_i),
         .inst_addr_i(pc_pc_o),
-        .int_flag_i(`YX_INT_NONE),
-        .int_flag_o(),
         .hold_flag_i(ctrl_hold_flag_o),
         .inst_o(if_inst_o),
         .inst_addr_o(if_inst_addr_o)
@@ -217,11 +214,9 @@ module yx_tinyriscv_core(
         .inst_addr_i(if_inst_addr_o),
         .reg1_rdata_i(regs_rdata1_o),
         .reg2_rdata_i(regs_rdata2_o),
-        .csr_rdata_i(`YX_ZeroWord),
         .ex_jump_flag_i(ex_jump_flag_o),
         .reg1_raddr_o(id_reg1_raddr_o),
         .reg2_raddr_o(id_reg2_raddr_o),
-        .csr_raddr_o(),
         .inst_o(id_inst_o),
         .inst_addr_o(id_inst_addr_o),
         .reg1_rdata_o(id_reg1_rdata_o),
@@ -231,10 +226,7 @@ module yx_tinyriscv_core(
         .op1_o(id_op1_o),
         .op2_o(id_op2_o),
         .op1_jump_o(id_op1_jump_o),
-        .op2_jump_o(id_op2_jump_o),
-        .csr_we_o(),
-        .csr_rdata_o(),
-        .csr_waddr_o()
+        .op2_jump_o(id_op2_jump_o)
     );
 
     yx_id_ex u_id_ex(
@@ -260,13 +252,7 @@ module yx_tinyriscv_core(
         .op1_o(ie_op1_o),
         .op2_o(ie_op2_o),
         .op1_jump_o(ie_op1_jump_o),
-        .op2_jump_o(ie_op2_jump_o),
-        .csr_we_i(`YX_WriteDisable),
-        .csr_waddr_i(`YX_ZeroWord),
-        .csr_rdata_i(`YX_ZeroWord),
-        .csr_we_o(),
-        .csr_waddr_o(),
-        .csr_rdata_o()
+        .op2_jump_o(ie_op2_jump_o)
     );
 
     yx_ex u_ex(
@@ -293,16 +279,7 @@ module yx_tinyriscv_core(
         .reg_waddr_o(ex_reg_waddr_o),
         .hold_flag_o(ex_hold_flag_o),
         .jump_flag_o(ex_jump_flag_o),
-        .jump_addr_o(ex_jump_addr_o),
-        .int_assert_i(`YX_INT_DEASSERT),
-        .int_addr_i(`YX_ZeroWord),
-        .csr_we_i(`YX_WriteDisable),
-        .csr_waddr_i(`YX_ZeroWord),
-        .csr_rdata_i(`YX_ZeroWord),
-        .csr_wdata_o(),
-        .csr_we_o(),
-        .csr_waddr_o()
+        .jump_addr_o(ex_jump_addr_o)
     );
 
 endmodule
-

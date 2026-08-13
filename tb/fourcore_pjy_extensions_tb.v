@@ -8,13 +8,15 @@ module fourcore_pjy_extensions_tb;
     end
 `endif
     reg clk = 0, rst = 0;
-    reg [2:0] chip_sel = 3'b010;
+    reg [1:0] chip_sel = 2'b10;
     wire uart_tx, i2c_scl, i2c_sda, over, succ;
     wire [3:0] PWM_o;
     wire [7:0] ext_mem_data_o, ext_mem_data_i;
     wire ext_rom_we, ext_ram_we;
-    wire [31:0] ext_rom_addr, ext_rom_wdata, ext_rom_rdata;
-    wire [31:0] ext_ram_addr, ext_ram_wdata, ext_ram_rdata;
+    wire [7:0] ext_rom_addr;
+    wire [3:0] ext_ram_addr;
+    wire [31:0] ext_rom_wdata, ext_rom_rdata;
+    wire [31:0] ext_ram_wdata, ext_ram_rdata;
     reg [7:0] rx_byte;
     reg [7:0] sid_expected [0:9];
     integer baud_cycles = 32'h1b8 + 1;
@@ -23,7 +25,7 @@ module fourcore_pjy_extensions_tb;
     pullup(i2c_scl); pullup(i2c_sda);
 
     task reset_pjy; begin
-        @(negedge clk); rst = 0; chip_sel = 3'b010;
+        @(negedge clk); rst = 0; chip_sel = 2'b10;
         repeat (8) @(posedge clk);
         @(negedge clk); rst = 1;
     end endtask
@@ -37,7 +39,7 @@ module fourcore_pjy_extensions_tb;
     initial begin
         sid_expected[0]="2"; sid_expected[1]="0"; sid_expected[2]="2"; sid_expected[3]="5";
         sid_expected[4]="2"; sid_expected[5]="1"; sid_expected[6]="0"; sid_expected[7]="9";
-        sid_expected[8]="0"; sid_expected[9]="2";
+        sid_expected[8]="0"; sid_expected[9]="5";
 
         $readmemh("../inputs/pjy/test_command/Extend_Inst_Example/sID/sID_inst.data", u_ext_rom._rom);
         reset_pjy();
@@ -46,7 +48,7 @@ module fourcore_pjy_extensions_tb;
             if (rx_byte !== sid_expected[sid_idx]) errors = errors + 1;
         end
         wait(dut.u_pjy.u_sid_uart_sender.done_o === 1'b1);
-        if (errors == 0) $display("PASS FINAL_TOP PJY_sID received_2025210902");
+        if (errors == 0) $display("PASS FINAL_TOP PJY_sID received_2025210905");
         else $display("FAIL FINAL_TOP PJY_sID errors=%0d", errors);
 
         @(negedge clk); rst = 0; repeat (8) @(posedge clk);
@@ -80,7 +82,7 @@ module fourcore_pjy_extensions_tb;
     pjy_mem_bridge_fpga u_mem_bridge_fpga(.clk(clk), .rst(rst), .ext_mem_data_i(ext_mem_data_o), .ext_mem_data_o(ext_mem_data_i),
         .rom_we_o(ext_rom_we), .rom_addr_o(ext_rom_addr), .rom_data_o(ext_rom_wdata), .rom_data_i(ext_rom_rdata),
         .ram_we_o(ext_ram_we), .ram_addr_o(ext_ram_addr), .ram_data_o(ext_ram_wdata), .ram_data_i(ext_ram_rdata));
-    pjy_rom u_ext_rom(.clk(clk), .rst(rst), .we_i(ext_rom_we), .addr_i(ext_rom_addr), .data_i(ext_rom_wdata), .data_o(ext_rom_rdata));
-    pjy_ram u_ext_ram(.clk(clk), .rst(rst), .we_i(ext_ram_we), .addr_i(ext_ram_addr), .data_i(ext_ram_wdata), .data_o(ext_ram_rdata));
+    yc_rom u_ext_rom(.clk(clk), .rst(rst), .we_i(ext_rom_we), .addr_i(ext_rom_addr), .data_i(ext_rom_wdata), .data_o(ext_rom_rdata));
+    yc_ram u_ext_ram(.clk(clk), .rst(rst), .we_i(ext_ram_we), .addr_i(ext_ram_addr), .data_i(ext_ram_wdata), .data_o(ext_ram_rdata));
     lm75_model_rt u_lm75(.io_scl(i2c_scl), .io_sda(i2c_sda));
 endmodule

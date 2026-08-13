@@ -5,7 +5,7 @@
 module tinyriscv_4core_top(
     input  wire       clk,
     input  wire       rst,
-    input  wire [2:0] chip_sel,
+    input  wire [1:0] chip_sel,
     input  wire       uart_debug_en,
     input  wire       uart_rx,
     output wire       uart_tx,
@@ -27,12 +27,12 @@ module tinyriscv_4core_top(
     output wire       succ
 );
 
-    localparam SEL_YC = 3'b000;
-    localparam SEL_YX = 3'b001;
-    localparam SEL_PJY = 3'b010;
-    localparam SEL_KHOREE = 3'b011;
+    localparam SEL_YC = 2'b00;
+    localparam SEL_YX = 2'b01;
+    localparam SEL_PJY = 2'b10;
+    localparam SEL_KHOREE = 2'b11;
 
-    reg [2:0] selected;
+    reg [1:0] selected;
     always @(posedge clk) begin
         if (!rst)
             selected <= chip_sel;
@@ -180,7 +180,6 @@ module tinyriscv_4core_top(
     wire yx_scl, yx_sda_low, pjy_scl, pjy_sda_low, kh_scl, kh_sda_low;
     wire [2:0] unused_pwm_yc, unused_pwm_yx, unused_pwm_kh;
     wire [3:0] unused_pwm_pjy;
-    wire pjy_halted;
 
     // One physical open-drain I2C pad pair, driven only by the selected tile.
     assign i2c_scl_drive_low_o = (sel_yc && yc_scl_low) ||
@@ -240,7 +239,7 @@ module tinyriscv_4core_top(
     );
 
     pjy_tinyriscv_soc_top u_pjy(
-        .clk(clk), .rst(rst_pjy), .over(pjy_over), .succ(pjy_succ), .halted_ind(pjy_halted),
+        .clk(clk), .rst(rst_pjy), .over(pjy_over), .succ(pjy_succ),
         .uart_debug_pin(uart_debug_en & sel_pjy), .uart_tx_pin(pjy_uart_tx), .uart_rx_pin(uart_rx),
         .PWM_o(unused_pwm_pjy),
         .io_scl(pjy_scl), .io_sda_i(i2c_sda), .io_sda_drive_low_o(pjy_sda_low),

@@ -9,7 +9,7 @@ module fourcore_extension_program_tb;
     end
 `endif
     reg clk=0,rst=0;
-    reg[2:0]chip_sel=0;
+    reg[1:0]chip_sel=0;
     wire uart_tx,i2c_scl,i2c_sda,over,succ;
     wire[3:0]PWM_o;
     integer core=0,test_kind=0,errors=0,i;
@@ -50,7 +50,7 @@ module fourcore_extension_program_tb;
         if(!$value$plusargs("TEST_KIND=%d",test_kind))test_kind=0;
         if(!$value$plusargs("INST_FILE=%s",inst_file))
             inst_file="../firmware/test_command/Extend_Inst_Example/sID/sID_inst.data";
-        chip_sel=core[2:0];
+        chip_sel=core[1:0];
         $readmemh(inst_file,dut.u_rom._rom);
         repeat(8)@(posedge clk);@(negedge clk);rst=1;
         case(test_kind)

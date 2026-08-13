@@ -6,11 +6,9 @@ module yx_id(
     input wire[`YX_InstAddrBus] inst_addr_i,
     input wire[`YX_RegBus] reg1_rdata_i,
     input wire[`YX_RegBus] reg2_rdata_i,
-    input wire[`YX_RegBus] csr_rdata_i,
     input wire ex_jump_flag_i,
     output reg[`YX_RegAddrBus] reg1_raddr_o,
     output reg[`YX_RegAddrBus] reg2_raddr_o,
-    output reg[`YX_MemAddrBus] csr_raddr_o,
     output reg[`YX_MemAddrBus] op1_o,
     output reg[`YX_MemAddrBus] op2_o,
     output reg[`YX_MemAddrBus] op1_jump_o,
@@ -20,10 +18,7 @@ module yx_id(
     output reg[`YX_RegBus] reg1_rdata_o,
     output reg[`YX_RegBus] reg2_rdata_o,
     output reg reg_we_o,
-    output reg[`YX_RegAddrBus] reg_waddr_o,
-    output reg csr_we_o,
-    output reg[`YX_RegBus] csr_rdata_o,
-    output reg[`YX_MemAddrBus] csr_waddr_o
+    output reg[`YX_RegAddrBus] reg_waddr_o
     );
 
     wire[6:0] opcode = inst_i[6:0];
@@ -38,10 +33,6 @@ module yx_id(
         inst_addr_o = inst_addr_i;
         reg1_rdata_o = reg1_rdata_i;
         reg2_rdata_o = reg2_rdata_i;
-        csr_rdata_o = `YX_ZeroWord;
-        csr_raddr_o = `YX_ZeroWord;
-        csr_waddr_o = `YX_ZeroWord;
-        csr_we_o = `YX_WriteDisable;
         op1_o = `YX_ZeroWord;
         op2_o = `YX_ZeroWord;
         op1_jump_o = `YX_ZeroWord;

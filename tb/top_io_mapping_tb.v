@@ -3,13 +3,13 @@
 module top_io_mapping_tb;
     reg clk = 1'b0;
     reg rst = 1'b0;
-    reg [2:0] chip_sel = 3'b111;
+    reg [1:0] chip_sel = 2'b00;
     reg uart_debug_en = 1'b0;
     reg uart_rx = 1'b1;
     reg [7:0] ext_mem_data_i = 8'b0;
     reg ext_mem_tx_ready_i = 1'b0;
     reg ext_mem_rx_valid_i = 1'b0;
-    reg spare_in = 1'b0;
+    reg [1:0] spare_in = 2'b0;
     wire uart_tx;
     wire [3:0] PWM_o;
     tri1 i2c_scl;
@@ -25,28 +25,22 @@ module top_io_mapping_tb;
     always #5 clk = ~clk;
 
     task check_map;
-        input [2:0] physical;
-        input [2:0] logical;
+        input [1:0] value;
         begin
-            chip_sel = physical;
+            chip_sel = value;
             #1;
-            if (dut.chip_sel_logic !== logical) begin
-                $display("FAIL IO_MAP physical=%b expected=%b got=%b",
-                         physical, logical, dut.chip_sel_logic);
+            if (dut.chip_sel_core !== value) begin
+                $display("FAIL IO_MAP input=%b got=%b", value, dut.chip_sel_core);
                 errors = errors + 1;
             end
         end
     endtask
 
     initial begin
-        check_map(3'b111, 3'b000);
-        check_map(3'b110, 3'b001);
-        check_map(3'b101, 3'b010);
-        check_map(3'b011, 3'b011);
-        check_map(3'b000, 3'b111);
-        check_map(3'b001, 3'b111);
-        check_map(3'b010, 3'b111);
-        check_map(3'b100, 3'b111);
+        check_map(2'b00);
+        check_map(2'b01);
+        check_map(2'b10);
+        check_map(2'b11);
         if (errors == 0)
             $display("TEST_PASS top_IO_chip_sel_mapping");
         else

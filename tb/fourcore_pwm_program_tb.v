@@ -10,7 +10,7 @@ module fourcore_pwm_program_tb;
     end
 `endif
     reg clk = 0, rst = 0;
-    reg [2:0] chip_sel = 0;
+    reg [1:0] chip_sel = 0;
     wire uart_tx, i2c_scl, i2c_sda, over, succ;
     wire [3:0] PWM_o;
     wire [7:0] ext_mem_data_o, ext_mem_data_i;
@@ -25,7 +25,7 @@ module fourcore_pwm_program_tb;
     pullup(i2c_sda);
 
     task run_core;
-        input [2:0] owner;
+        input [1:0] owner;
         integer cycles;
         begin
             @(negedge clk); rst = 0; chip_sel = owner;
@@ -63,10 +63,10 @@ module fourcore_pwm_program_tb;
         if (!$value$plusargs("INST_FILE=%s", inst_file))
             inst_file = "../inputs/pjy/test_command/Other_Example/PWM/PWM_inst.data";
         $readmemh(inst_file, dut.u_rom._rom);
-        run_core(3'b000);
-        run_core(3'b001);
-        run_core(3'b010);
-        run_core(3'b011);
+        run_core(2'b00);
+        run_core(2'b01);
+        run_core(2'b10);
+        run_core(2'b11);
         if (errors == 0) $display("TEST_PASS fourcore_PWM_program shared_yc_pwm");
         else $display("TEST_FAIL fourcore_PWM_program errors=%0d", errors);
         $finish;

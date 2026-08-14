@@ -27,7 +27,10 @@ module yx_bridge(
     reg [31:0] latch_data_w;
     reg latch_we;
     reg req_d;
-    wire trigger = req_i && ((req_d === 1'b0) || (addr_i !== curr_addr));
+    // All operands are reset flops or primary request inputs in hardware, so
+    // ordinary two-state comparisons preserve the intended edge/address
+    // detection while remaining synthesizable by Design Compiler.
+    wire trigger = req_i && ((req_d == 1'b0) || (addr_i != curr_addr));
     assign bridge_hold = (state != IDLE) || (state == IDLE && trigger);
 
     always @(posedge clk) begin

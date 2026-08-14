@@ -79,8 +79,7 @@ module yc_bridge_core(
     assign current_req_matches_trans = (req_i == `YC_RIB_REQ) &&
                                        (we_i == trans_we) &&
                                        (is_ram_req == trans_target) &&
-                                       (phy_addr == trans_addr) &&
-                                       ((trans_we != `YC_WriteEnable) || (data_i == trans_wdata));
+                                       (phy_addr == trans_addr);
 
     // If the current transfer ends this cycle and the skid buffer is empty,
     // the module can immediately consume the visible bus request.

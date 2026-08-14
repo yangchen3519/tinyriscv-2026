@@ -30,6 +30,7 @@ VCS/ModelSim work 库、日志、FSDB、Vivado 工程缓存或服务器过程文
 | `fpga/filelist.f` | FPGA/端到端仿真附加清单 |
 | `sim/*.sh`, `sim/*.ps1`, `sim/Makefile` | VCS、Verdi、ModelSim 回归入口 |
 | `tools/` | filelist、资源审计及 Vivado 导入脚本 |
+| `docs/` | 使用手册、设计说明、合并记录与验证报告 |
 
 本交付不含 XDC。旧单核约束与新的四核/FPGA 顶层端口不匹配，不能复用；上板同学应
 依据实际开发板原理图建立新 XDC。
@@ -61,5 +62,8 @@ BUILD_ROOT=/tmp/$USER-tinyriscv-4core bash run_vcs_regression.sh
 bash run_verdi_checks.sh /tmp/$USER-tinyriscv-4core ../output
 ```
 
-Vivado 导入、filelist 解释和每个 testbench 的作用见 `HANDOFF.md`；上板步骤见
-`FPGA_BOARD_GUIDE.md`；本轮验证明细见 `VERIFICATION_REPORT.md`。
+Vivado 导入、filelist 解释和每个 testbench 的作用见
+[`docs/HANDOFF.md`](docs/HANDOFF.md)；上板步骤见
+[`docs/FPGA_BOARD_GUIDE.md`](docs/FPGA_BOARD_GUIDE.md)；本轮验证明细见
+[`docs/VERIFICATION_REPORT.md`](docs/VERIFICATION_REPORT.md)。完整文档导航见
+[`docs/README.md`](docs/README.md)。

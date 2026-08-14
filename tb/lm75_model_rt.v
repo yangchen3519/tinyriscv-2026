@@ -34,7 +34,9 @@ module lm75_model_rt #(
   else if(ack_active)begin ack_active<=0;phase<=after_ack;
    if(after_ack==TX)begin sda_low<=~TEMP[7];tx_bit<=6;end else sda_low<=0;end
   else if(phase==TX)begin sda_low<=~TEMP[tx_bit];if(tx_bit==0)phase<=ACK2;else tx_bit<=tx_bit-1'b1;end
-  else if(phase==ACK2)begin sda_low<=~FRAC[7];tx_bit<=6;phase<=TX2;end
+  // Release SDA during the master's ACK bit.  The second byte starts on the
+  // following falling SCL edge; driving FRAC[7] here would shift that byte.
+  else if(phase==ACK2)begin sda_low<=0;tx_bit<=7;phase<=TX2;end
   else if(phase==TX2)begin sda_low<=~FRAC[tx_bit];if(tx_bit==0)phase<=NACK;else tx_bit<=tx_bit-1'b1;end
   else if(phase==NACK)begin sda_low<=0;phase<=IDLE;end
  end

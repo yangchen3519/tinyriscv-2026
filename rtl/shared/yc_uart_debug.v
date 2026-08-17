@@ -91,20 +91,37 @@ module yc_uart_debug(
     reg[15:0] remain_packet_count;
     reg[31:0] fw_file_size;
     reg[31:0] write_mem_addr;
-    reg[31:0] write_mem_data;
-    reg[7:0] write_mem_byte_index0;
-    reg[7:0] write_mem_byte_index1;
-    reg[7:0] write_mem_byte_index2;
-    reg[7:0] write_mem_byte_index3;
+    reg[2:0] write_word_index;
 
-    reg[7:0] rx_data[0:34];
+    // Only packet bytes 1..32 are written to memory.  Store them as a
+    // sequential shift queue instead of a randomly indexed 35-byte array.
+    // This removes the large read multiplexers and write decoder that the
+    // variable array indices otherwise synthesize into.
+    reg[255:0] payload_shift;
+    reg[7:0] packet_crc_lo;
+    reg[7:0] packet_crc_hi;
 
     reg[15:0] crc_result;
-    reg[3:0] crc_bit_index;
-    reg[7:0] crc_byte_index;
+
+    function [15:0] crc16_next_byte;
+        input [15:0] crc_in;
+        input [7:0] data_in;
+        integer bit_index;
+        reg [15:0] crc_work;
+        begin
+            crc_work = crc_in ^ data_in;
+            for (bit_index = 0; bit_index < 8; bit_index = bit_index + 1) begin
+                if (crc_work[0] == 1'b1)
+                    crc_work = {1'b0, crc_work[15:1]} ^ 16'ha001;
+                else
+                    crc_work = {1'b0, crc_work[15:1]};
+            end
+            crc16_next_byte = crc_work;
+        end
+    endfunction
 
     wire uart_rx_ready = ((mem_rdata_i & `UART_RX_OVER_FLAG) == `UART_RX_OVER_FLAG);
-    wire write_word_is_last = (write_mem_byte_index0 == (need_to_rec_bytes - 2));
+    wire write_word_is_last = (write_word_index == 3'd7);
 
     // 向总线请求信号
     assign req_o = mem_req_r;
@@ -219,15 +236,11 @@ module yc_uart_debug(
                     end
                 end
                 S_CRC_START: begin
-                    state <= S_CRC_CALC;
-                end
-                S_CRC_CALC: begin
-                    if ((crc_byte_index == need_to_rec_bytes - 2) && crc_bit_index == 4'h8) begin
-                        state <= S_CRC_END;
-                    end
+                    // CRC is accumulated while the 32 payload bytes arrive.
+                    state <= S_CRC_END;
                 end
                 S_CRC_END: begin
-                    if (crc_result == {rx_data[need_to_rec_bytes - 1], rx_data[need_to_rec_bytes - 2]}) begin
+                    if (crc_result == {packet_crc_hi, packet_crc_lo}) begin
                         if (need_to_rec_bytes == `UART_FIRST_PACKET_LEN && remain_packet_count == 16'h0) begin
                             remain_packet_count <= (fw_file_size >> 5) + 1'b1;
                             state <= S_SEND_ACK_REQ;
@@ -243,7 +256,7 @@ module yc_uart_debug(
                     mem_req_r <= 1'b1;
                     mem_addr_o <= write_mem_addr;
                     mem_we_o <= 1'b1;
-                    mem_wdata_o <= write_mem_data;
+                    mem_wdata_o <= payload_shift[31:0];
                     state <= S_WRITE_MEM_WAIT;
                 end
                 S_WRITE_MEM_WAIT: begin
@@ -316,22 +329,46 @@ module yc_uart_debug(
         end
     end
 
-    // 读取接收到的串口数据
+    // Receive packet data.  Bytes 1..32 are shifted into a word queue whose
+    // low word is {byte4,byte3,byte2,byte1}; bytes 33/34 carry the CRC.
     always @ (posedge clk) begin
         if (rst == 1'b0 || debug_en_i == 1'b0) begin
             rec_bytes_index <= 8'h0;
+            payload_shift <= 256'h0;
+            packet_crc_lo <= 8'h0;
+            packet_crc_hi <= 8'h0;
+            write_word_index <= 3'h0;
         end else begin
             case (state)
                 S_REC_FIRST_PACKET: begin
                     rec_bytes_index <= 8'h0;
+                    payload_shift <= 256'h0;
+                    packet_crc_lo <= 8'h0;
+                    packet_crc_hi <= 8'h0;
+                    write_word_index <= 3'h0;
                 end
                 S_REC_REMAIN_PACKET: begin
                     rec_bytes_index <= 8'h0;
+                    payload_shift <= 256'h0;
+                    packet_crc_lo <= 8'h0;
+                    packet_crc_hi <= 8'h0;
+                    write_word_index <= 3'h0;
                 end
                 S_READ_UART_RX_WAIT: begin
                     if (mem_ack_i == 1'b1) begin
-                        rx_data[rec_bytes_index] <= mem_rdata_i[7:0];
+                        if ((rec_bytes_index >= 8'd1) && (rec_bytes_index <= 8'd32))
+                            payload_shift <= {mem_rdata_i[7:0], payload_shift[255:8]};
+                        else if (rec_bytes_index == 8'd33)
+                            packet_crc_lo <= mem_rdata_i[7:0];
+                        else if (rec_bytes_index == 8'd34)
+                            packet_crc_hi <= mem_rdata_i[7:0];
                         rec_bytes_index <= rec_bytes_index + 1'b1;
+                    end
+                end
+                S_WRITE_MEM_WAIT: begin
+                    if (mem_ack_i == 1'b1) begin
+                        payload_shift <= {32'h0, payload_shift[255:32]};
+                        write_word_index <= write_word_index + 1'b1;
                     end
                 end
             endcase
@@ -343,11 +380,16 @@ module yc_uart_debug(
         if (rst == 1'b0 || debug_en_i == 1'b0) begin
             fw_file_size <= 32'h0;
         end else begin
-            case (state)
-                S_CRC_START: begin
-                    fw_file_size <= {rx_data[25], rx_data[26], rx_data[27], rx_data[28]};
-                end
-            endcase
+            if (state == S_REC_FIRST_PACKET) begin
+                fw_file_size <= 32'h0;
+            end else if ((state == S_READ_UART_RX_WAIT) && (mem_ack_i == 1'b1)) begin
+                case (rec_bytes_index)
+                    8'd25: fw_file_size[31:24] <= mem_rdata_i[7:0];
+                    8'd26: fw_file_size[23:16] <= mem_rdata_i[7:0];
+                    8'd27: fw_file_size[15:8] <= mem_rdata_i[7:0];
+                    8'd28: fw_file_size[7:0] <= mem_rdata_i[7:0];
+                endcase
+            end
         end
     end
 
@@ -369,165 +411,18 @@ module yc_uart_debug(
         end
     end
 
-    always @ (posedge clk) begin
-        if (rst == 1'b0 || debug_en_i == 1'b0) begin
-            write_mem_data <= 32'h0;
-        end else begin
-            case (state)
-                S_REC_FIRST_PACKET: begin
-                    write_mem_data <= 32'h0;
-                end
-                S_CRC_END: begin
-                    write_mem_data <= {rx_data[4], rx_data[3], rx_data[2], rx_data[1]};
-                end
-                S_WRITE_MEM_WAIT: begin
-                    if (mem_ack_i == 1'b1) begin
-                        write_mem_data <= {rx_data[write_mem_byte_index3], rx_data[write_mem_byte_index2], rx_data[write_mem_byte_index1], rx_data[write_mem_byte_index0]};
-                    end
-                end
-            endcase
-        end
-    end
-
-    always @ (posedge clk) begin
-        if (rst == 1'b0 || debug_en_i == 1'b0) begin
-            write_mem_byte_index0 <= 8'h0;
-        end else begin
-            case (state)
-                S_REC_FIRST_PACKET: begin
-                    write_mem_byte_index0 <= 8'h0;
-                end
-                S_CRC_END: begin
-                    write_mem_byte_index0 <= 8'h5;
-                end
-                S_WRITE_MEM_WAIT: begin
-                    if (mem_ack_i == 1'b1) begin
-                        write_mem_byte_index0 <= write_mem_byte_index0 + 4;
-                    end
-                end
-            endcase
-        end
-    end
-
-    always @ (posedge clk) begin
-        if (rst == 1'b0 || debug_en_i == 1'b0) begin
-            write_mem_byte_index1 <= 8'h0;
-        end else begin
-            case (state)
-                S_REC_FIRST_PACKET: begin
-                    write_mem_byte_index1 <= 8'h0;
-                end
-                S_CRC_END: begin
-                    write_mem_byte_index1 <= 8'h6;
-                end
-                S_WRITE_MEM_WAIT: begin
-                    if (mem_ack_i == 1'b1) begin
-                        write_mem_byte_index1 <= write_mem_byte_index1 + 4;
-                    end
-                end
-            endcase
-        end
-    end
-
-    always @ (posedge clk) begin
-        if (rst == 1'b0 || debug_en_i == 1'b0) begin
-            write_mem_byte_index2 <= 8'h0;
-        end else begin
-            case (state)
-                S_REC_FIRST_PACKET: begin
-                    write_mem_byte_index2 <= 8'h0;
-                end
-                S_CRC_END: begin
-                    write_mem_byte_index2 <= 8'h7;
-                end
-                S_WRITE_MEM_WAIT: begin
-                    if (mem_ack_i == 1'b1) begin
-                        write_mem_byte_index2 <= write_mem_byte_index2 + 4;
-                    end
-                end
-            endcase
-        end
-    end
-
-    always @ (posedge clk) begin
-        if (rst == 1'b0 || debug_en_i == 1'b0) begin
-            write_mem_byte_index3 <= 8'h0;
-        end else begin
-            case (state)
-                S_REC_FIRST_PACKET: begin
-                    write_mem_byte_index3 <= 8'h0;
-                end
-                S_CRC_END: begin
-                    write_mem_byte_index3 <= 8'h8;
-                end
-                S_WRITE_MEM_WAIT: begin
-                    if (mem_ack_i == 1'b1) begin
-                        write_mem_byte_index3 <= write_mem_byte_index3 + 4;
-                    end
-                end
-            endcase
-        end
-    end
-
-    // CRC计算
+    // Calculate the packet CRC while bytes 1..32 are accepted.  This avoids
+    // rereading the whole packet through a 35:1 byte multiplexer.
     always @ (posedge clk) begin
         if (rst == 1'b0 || debug_en_i == 1'b0) begin
             crc_result <= 16'h0;
         end else begin
-            case (state)
-                S_CRC_START: begin
-                    crc_result <= 16'hffff;
-                end
-                S_CRC_CALC: begin
-                    if (crc_bit_index == 4'h0) begin
-                        crc_result <= crc_result ^ rx_data[crc_byte_index];
-                    end else begin
-                        if (crc_bit_index < 4'h9) begin
-                            if (crc_result[0] == 1'b1) begin
-                                crc_result <= {1'b0, crc_result[15:1]} ^ 16'ha001;
-                            end else begin
-                                crc_result <= {1'b0, crc_result[15:1]};
-                            end
-                        end
-                    end
-                end
-            endcase
-        end
-    end
-
-    always @ (posedge clk) begin
-        if (rst == 1'b0 || debug_en_i == 1'b0) begin
-            crc_bit_index <= 4'h0;
-        end else begin
-            case (state)
-                S_CRC_START: begin
-                    crc_bit_index <= 4'h0;
-                end
-                S_CRC_CALC: begin
-                    if (crc_bit_index < 4'h9) begin
-                        crc_bit_index <= crc_bit_index + 1'b1;
-                    end else begin
-                        crc_bit_index <= 4'h0;
-                    end
-                end
-            endcase
-        end
-    end
-
-    always @ (posedge clk) begin
-        if (rst == 1'b0 || debug_en_i == 1'b0) begin
-            crc_byte_index <= 8'h0;
-        end else begin
-            case (state)
-                S_CRC_START: begin
-                    crc_byte_index <= 8'h1;
-                end
-                S_CRC_CALC: begin
-                    if (crc_bit_index == 4'h0) begin
-                        crc_byte_index <= crc_byte_index + 1'b1;
-                    end
-                end
-            endcase
+            if ((state == S_REC_FIRST_PACKET) || (state == S_REC_REMAIN_PACKET)) begin
+                crc_result <= 16'hffff;
+            end else if ((state == S_READ_UART_RX_WAIT) && (mem_ack_i == 1'b1) &&
+                         (rec_bytes_index >= 8'd1) && (rec_bytes_index <= 8'd32)) begin
+                crc_result <= crc16_next_byte(crc_result, mem_rdata_i[7:0]);
+            end
         end
     end
 

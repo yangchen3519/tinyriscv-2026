@@ -27,7 +27,7 @@ module tinyriscv_4core_top_IO (
     wire       clk_core;
     wire       rst_core;
     wire [1:0] chip_sel_core;
-    wire       unused_legacy_jtag_tms_core;
+    wire       unused_spare_in0_core;
     wire       uart_debug_en_core;
     wire       uart_rx_core;
     wire       uart_tx_core;
@@ -56,13 +56,13 @@ module tinyriscv_4core_top_IO (
     PDDW0204CDG muart_rx   (.OEN(1'b1), .I(1'b0), .PAD(uart_rx),
                             .C(uart_rx_core), .DS(1'b0), .PE(1'b0), .IE(1'b1));
 
-    // The fixed legacy chip-select/JTAG locations carry the two selector bits.
-    PDDW0204CDG mchip_sel  (.OEN(1'b1), .I(1'b0), .PAD(chip_sel[0]),
+    // Two ordinary input PADs carry the four-core selector.
+    PDDW0204CDG mchip_sel_0 (.OEN(1'b1), .I(1'b0), .PAD(chip_sel[0]),
                             .C(chip_sel_core[0]), .DS(1'b0), .PE(1'b0), .IE(1'b1));
-    PDDW0204CDG mjtag_TCK  (.OEN(1'b1), .I(1'b0), .PAD(chip_sel[1]),
+    PDDW0204CDG mchip_sel_1 (.OEN(1'b1), .I(1'b0), .PAD(chip_sel[1]),
                             .C(chip_sel_core[1]), .DS(1'b0), .PE(1'b0), .IE(1'b1));
-    PDDW0204CDG mjtag_TMS  (.OEN(1'b1), .I(1'b0), .PAD(spare_in[0]),
-                            .C(unused_legacy_jtag_tms_core), .DS(1'b0), .PE(1'b0), .IE(1'b1));
+    PDDW0204CDG mspare_in_0 (.OEN(1'b1), .I(1'b0), .PAD(spare_in[0]),
+                            .C(unused_spare_in0_core), .DS(1'b0), .PE(1'b0), .IE(1'b1));
 
     // Fixed SPI locations are repurposed for external-memory handshaking.
     PDDW0204CDG mspi_miso  (.OEN(1'b1), .I(1'b0), .PAD(ext_mem_tx_ready_i),
@@ -80,8 +80,8 @@ module tinyriscv_4core_top_IO (
     PDDW0204CDG mgpio6 (.OEN(1'b1), .I(1'b0), .PAD(ext_mem_data_i[6]), .C(ext_mem_data_i_core[6]), .DS(1'b0), .PE(1'b0), .IE(1'b1));
     PDDW0204CDG mgpio7 (.OEN(1'b1), .I(1'b0), .PAD(ext_mem_data_i[7]), .C(ext_mem_data_i_core[7]), .DS(1'b0), .PE(1'b0), .IE(1'b1));
 
-    // One unused legacy input PAD is retained because io.file fixes its position.
-    PDDW0204CDG mjtag_TDI  (.OEN(1'b1), .I(1'b0), .PAD(spare_in[1]),
+    // Spare PADs retain package flexibility without any JTAG control logic.
+    PDDW0204CDG mspare_in_1 (.OEN(1'b1), .I(1'b0), .PAD(spare_in[1]),
                             .C(unused_spare_in_core), .DS(1'b0), .PE(1'b0), .IE(1'b1));
 
     // Output PADs.
@@ -109,8 +109,8 @@ module tinyriscv_4core_top_IO (
     PDDW0204CDG mgpioF (.OEN(1'b0), .I(ext_mem_data_o_core[7]), .PAD(ext_mem_data_o[7]), .C(), .DS(1'b1), .PE(1'b0), .IE(1'b0));
 
     // Unused legacy output PADs are driven to a defined value.
-    PDDW0204CDG mjtag_TDO (.OEN(1'b0), .I(1'b0), .PAD(spare_out[0]), .C(), .DS(1'b1), .PE(1'b0), .IE(1'b0));
-    PDDW0204CDG mhalt     (.OEN(1'b0), .I(1'b0), .PAD(spare_out[1]), .C(), .DS(1'b1), .PE(1'b0), .IE(1'b0));
+    PDDW0204CDG mspare_out_0 (.OEN(1'b0), .I(1'b0), .PAD(spare_out[0]), .C(), .DS(1'b1), .PE(1'b0), .IE(1'b0));
+    PDDW0204CDG mspare_out_1 (.OEN(1'b0), .I(1'b0), .PAD(spare_out[1]), .C(), .DS(1'b1), .PE(1'b0), .IE(1'b0));
 
     // Open-drain I2C PADs: output only drives zero; OEN releases the line.
     PDDW0204CDG mscl (.OEN(~i2c_scl_drive_low_core), .I(1'b0), .PAD(i2c_scl),
